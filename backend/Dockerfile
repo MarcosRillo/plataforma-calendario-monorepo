@@ -15,9 +15,11 @@ RUN apt-get update && apt-get install -y \
     curl \
     libzip-dev \
     libonig-dev \
+    libpq-dev \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install -j$(nproc) gd \
     && docker-php-ext-install pdo_mysql \
+    && docker-php-ext-install pdo_pgsql \
     && docker-php-ext-install mbstring \
     && docker-php-ext-install zip \
     && docker-php-ext-install exif \
@@ -46,6 +48,6 @@ RUN chown -R www:www /var/www
 # Cambiar al usuario www
 USER www
 
-# Exponer puerto 9000 y iniciar php-fpm
+# Exponer puerto 9000 y iniciar servidor built-in de PHP para desarrollo
 EXPOSE 9000
-CMD ["php-fpm"]
+CMD ["php", "artisan", "serve", "--host=0.0.0.0", "--port=9000"]

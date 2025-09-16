@@ -15,9 +15,14 @@ interface EventsListProps {
   onViewDetail: (eventId: number) => void;
   onEditEvent?: (event: Event) => void;
   onDeleteEvent?: (eventId: number) => void;
-  onApproveEvent?: (event: Event) => void;
+  // Double-Level Workflow Actions
+  onApproveInternal?: (event: Event) => void;
+  onRequestPublicApproval?: (event: Event) => void;
+  onPublishEvent?: (event: Event) => void;
   onRequestChanges?: (event: Event) => void;
   onRejectEvent?: (event: Event) => void;
+  // Legacy compatibility
+  onApproveEvent?: (event: Event) => void;
 }
 
 export const EventsList = ({
@@ -26,9 +31,13 @@ export const EventsList = ({
   onViewDetail,
   onEditEvent,
   onDeleteEvent,
-  onApproveEvent,
+  onApproveInternal,
+  onRequestPublicApproval,
+  onPublishEvent,
   onRequestChanges,
-  onRejectEvent
+  onRejectEvent,
+  // Legacy compatibility
+  onApproveEvent
 }: EventsListProps) => {
   // Helper function to identify if event belongs to Ente de Turismo
   const ENTE_TURISMO_ORG_ID = 1;
@@ -106,9 +115,13 @@ export const EventsList = ({
           onViewDetail={onViewDetail}
           onEditEvent={onEditEvent}
           onDeleteEvent={onDeleteEvent}
-          onApproveEvent={onApproveEvent}
+          onApproveInternal={onApproveInternal}
+          onRequestPublicApproval={onRequestPublicApproval}
+          onPublishEvent={onPublishEvent}
           onRequestChanges={onRequestChanges}
           onRejectEvent={onRejectEvent}
+          // Legacy compatibility
+          onApproveEvent={onApproveEvent}
           isEnteEvent={isEnteEvent(event)}
         />
       ))}

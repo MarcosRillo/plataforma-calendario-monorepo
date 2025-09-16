@@ -15,13 +15,31 @@ interface EventCardProps {
   onViewDetail: (eventId: number) => void;
   onEditEvent?: (event: Event) => void;
   onDeleteEvent?: (eventId: number) => void;
-  onApproveEvent?: (event: Event) => void;
+  // Double-Level Workflow Actions
+  onApproveInternal?: (event: Event) => void;
+  onRequestPublicApproval?: (event: Event) => void;
+  onPublishEvent?: (event: Event) => void;
   onRequestChanges?: (event: Event) => void;
   onRejectEvent?: (event: Event) => void;
+  // Legacy compatibility
+  onApproveEvent?: (event: Event) => void;
   isEnteEvent: boolean;
 }
 
-export const EventCard = ({ event, onViewDetail, onEditEvent, onDeleteEvent, onApproveEvent, onRequestChanges, onRejectEvent, isEnteEvent }: EventCardProps) => {
+export const EventCard = ({
+  event,
+  onViewDetail,
+  onEditEvent,
+  onDeleteEvent,
+  onApproveInternal,
+  onRequestPublicApproval,
+  onPublishEvent,
+  onRequestChanges,
+  onRejectEvent,
+  // Legacy compatibility
+  onApproveEvent,
+  isEnteEvent
+}: EventCardProps) => {
   const formatEventDate = (startDate: string, endDate: string) => {
     const start = new Date(startDate);
     const end = new Date(endDate);
@@ -110,6 +128,33 @@ export const EventCard = ({ event, onViewDetail, onEditEvent, onDeleteEvent, onA
     }
 
     return null;
+  };
+
+  // Double-level workflow helper functions
+  const getEventStatus = () => {
+    return event.status?.status_code || event.approval_status;
+  };
+
+  const canApproveInternal = () => {
+    return getEventStatus() === 'pending_internal_approval';
+  };
+
+  const canRequestPublicApproval = () => {
+    return getEventStatus() === 'approved_internal';
+  };
+
+  const canPublish = () => {
+    return getEventStatus() === 'pending_public_approval';
+  };
+
+  const canRequestChanges = () => {
+    const status = getEventStatus();
+    return !['rejected', 'published', 'cancelled'].includes(status);
+  };
+
+  const canReject = () => {
+    const status = getEventStatus();
+    return !['rejected', 'published', 'cancelled'].includes(status);
   };
 
   const { date, time } = formatEventDate(event.start_date, event.end_date);
@@ -201,9 +246,57 @@ export const EventCard = ({ event, onViewDetail, onEditEvent, onDeleteEvent, onA
               Ver Detalle
             </button>
 
-            {/* Conditional Action Buttons */}
-            {isEnteEvent ? (
-              // Internal Event Actions
+            {/* Double-Level Workflow Action Buttons */}
+
+            {/* Primary Workflow Actions */}
+            {canApproveInternal() && onApproveInternal && (
+              <button
+                onClick={() => onApproveInternal(event)}
+                className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-green-600 bg-green-50 hover:bg-green-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors duration-200"
+              >
+                Aprobar Interno
+              </button>
+            )}
+
+            {canRequestPublicApproval() && onRequestPublicApproval && (
+              <button
+                onClick={() => onRequestPublicApproval(event)}
+                className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-blue-600 bg-blue-50 hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
+              >
+                Solicitar Público
+              </button>
+            )}
+
+            {canPublish() && onPublishEvent && (
+              <button
+                onClick={() => onPublishEvent(event)}
+                className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-purple-600 bg-purple-50 hover:bg-purple-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 transition-colors duration-200"
+              >
+                Publicar
+              </button>
+            )}
+
+            {/* Secondary Actions */}
+            {canRequestChanges() && onRequestChanges && (
+              <button
+                onClick={() => onRequestChanges(event)}
+                className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-yellow-600 bg-yellow-50 hover:bg-yellow-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500 transition-colors duration-200"
+              >
+                Solicitar Cambios
+              </button>
+            )}
+
+            {canReject() && onRejectEvent && (
+              <button
+                onClick={() => onRejectEvent(event)}
+                className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-red-600 bg-red-50 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors duration-200"
+              >
+                Rechazar
+              </button>
+            )}
+
+            {/* Management Actions (for internal events) */}
+            {isEnteEvent && (
               <>
                 {onEditEvent && (
                   <button
@@ -223,36 +316,16 @@ export const EventCard = ({ event, onViewDetail, onEditEvent, onDeleteEvent, onA
                   </button>
                 )}
               </>
-            ) : (
-              // External Event Actions
-              <>
-                {onApproveEvent && (
-                  <button
-                    onClick={() => onApproveEvent(event)}
-                    className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-green-600 bg-green-50 hover:bg-green-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors duration-200"
-                  >
-                    Aprobar
-                  </button>
-                )}
+            )}
 
-                {onRequestChanges && (
-                  <button
-                    onClick={() => onRequestChanges(event)}
-                    className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-yellow-600 bg-yellow-50 hover:bg-yellow-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500 transition-colors duration-200"
-                  >
-                    Solicitar cambios
-                  </button>
-                )}
-
-                {onRejectEvent && (
-                  <button
-                    onClick={() => onRejectEvent(event)}
-                    className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-red-600 bg-red-50 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors duration-200"
-                  >
-                    Rechazar
-                  </button>
-                )}
-              </>
+            {/* Legacy Action (fallback) */}
+            {!canApproveInternal() && !canRequestPublicApproval() && !canPublish() && onApproveEvent && (
+              <button
+                onClick={() => onApproveEvent(event)}
+                className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-green-600 bg-green-50 hover:bg-green-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors duration-200"
+              >
+                Aprobar (Legacy)
+              </button>
             )}
         </div>
       </div>
