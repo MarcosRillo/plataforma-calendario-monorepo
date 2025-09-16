@@ -1,0 +1,16 @@
+vendor/
+node_modules/
+public/storage
+storage/*.key
+.env
+Homestead.yaml
+Homestead.json
+/.vagrant
+.phpunit.result.cache
+Dockerfile*
+docker-compose*
+.dockerignore
+.git
+.gitignore
+README.md
+.DS_Store

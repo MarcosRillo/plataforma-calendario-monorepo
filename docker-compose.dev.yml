@@ -1,0 +1,68 @@
+services:
+  # Base de datos PostgreSQL
+  db:
+    image: postgres:15
+    container_name: plataforma-calendario-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-root_password}
+      POSTGRES_DB: ${DB_DATABASE:-eventos_tucuman}
+      POSTGRES_USER: ${DB_USERNAME:-eventos_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-eventos_pass}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    networks:
+      - plataforma-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-eventos_user} -d ${DB_DATABASE:-eventos_tucuman}"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # Backend Laravel (PHP-FPM)
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+      args:
+        USER_ID: ${USER_ID:-1000}
+        GROUP_ID: ${GROUP_ID:-1000}
+    container_name: plataforma-calendario-backend
+    restart: unless-stopped
+    working_dir: /var/www
+    volumes:
+      - ./backend:/var/www
+      - composer_cache:/home/www/.composer
+    environment:
+      - APP_ENV=local
+      - APP_DEBUG=true
+      - APP_URL=http://localhost:8000
+      - DB_CONNECTION=pgsql
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_DATABASE=${DB_DATABASE:-eventos_tucuman}
+      - DB_USERNAME=${DB_USERNAME:-eventos_user}
+      - DB_PASSWORD=${DB_PASSWORD:-eventos_pass}
+      - XDEBUG_MODE=${XDEBUG_MODE:-off}
+      - XDEBUG_CONFIG=client_host=host.docker.internal
+    networks:
+      - plataforma-network
+    ports:
+      - "8000:8000"
+    command: ["php", "artisan", "serve", "--host=0.0.0.0", "--port=8000"]
+    depends_on:
+      db:
+        condition: service_healthy
+
+
+volumes:
+  postgres_data:
+    driver: local
+  composer_cache:
+    driver: local
+
+networks:
+  plataforma-network:
+    driver: bridge

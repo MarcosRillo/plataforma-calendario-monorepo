@@ -1,0 +1,280 @@
+/**
+ * Dashboard Mode View Component
+ * Conditional dashboard functionality for entity_admin/entity_staff users
+ * Integrates workflow-based filtering with the stable events base
+ */
+
+'use client';
+
+import { useState, useEffect } from 'react';
+import { useAuth } from '@/context/AuthContext';
+import { Event } from '@/types/event.types';
+import { EventsFilterTabs, EventsList, DashboardTab } from './';
+
+interface DashboardModeViewProps {
+  events: Event[];
+  isLoading?: boolean;
+  onViewDetail: (eventId: number) => void;
+  onEditEvent?: (event: Event) => void;
+  onDeleteEvent?: (eventId: number) => void;
+}
+
+interface TabCounters {
+  'requires-action': number;
+  'pending': number;
+  'published': number;
+  'historic': number;
+}
+
+export const DashboardModeView = ({
+  events,
+  isLoading = false,
+  onViewDetail,
+  onEditEvent,
+  onDeleteEvent
+}: DashboardModeViewProps) => {
+  const { user } = useAuth();
+  const [activeTab, setActiveTab] = useState<DashboardTab>('requires-action');
+  const [filteredEvents, setFilteredEvents] = useState<Event[]>([]);
+  const [counters, setCounters] = useState<TabCounters>({
+    'requires-action': 0,
+    'pending': 0,
+    'published': 0,
+    'historic': 0,
+  });
+
+  // Helper function to identify if event belongs to Ente de Turismo
+  const ENTE_TURISMO_ORG_ID = 1; // Ente de Turismo organization ID
+  const isEnteEvent = (event: Event): boolean => {
+    return event.organization_id === ENTE_TURISMO_ORG_ID;
+  };
+
+  // Check if user should see dashboard mode
+  const shouldShowDashboardMode = () => {
+    const userRole = user?.role?.role_code;
+    return userRole === 'entity_admin' || userRole === 'entity_staff';
+  };
+
+  // Filter events based on active tab using real status_code values
+  const filterEventsByTab = (events: Event[], tab: DashboardTab): Event[] => {
+    if (!events) {
+      return [];
+    }
+
+    let filtered: Event[] = [];
+
+    switch (tab) {
+      case 'requires-action':
+        // Events that need internal approval or other action
+        filtered = events.filter(event =>
+          event.status?.status_code === 'pending_internal_approval' ||
+          event.status?.status_code === 'pending_public_approval' ||
+          event.status?.status_code === 'requires_changes'
+        );
+        break;
+
+      case 'pending':
+        // Events approved internally but not yet published
+        filtered = events.filter(event =>
+          event.status?.status_code === 'approved_internal' ||
+          event.status?.status_code === 'draft'
+        );
+        break;
+
+      case 'published':
+        // Events that are live and visible to public
+        filtered = events.filter(event =>
+          event.status?.status_code === 'published'
+        );
+        break;
+
+      case 'historic':
+        // Events that are finished, rejected, or cancelled
+        filtered = events.filter(event => {
+          const isRejectedOrCancelled =
+            event.status?.status_code === 'rejected' ||
+            event.status?.status_code === 'cancelled';
+
+          const hasEnded = new Date(event.end_date) < new Date();
+
+          return isRejectedOrCancelled || hasEnded;
+        });
+        break;
+
+      default:
+        filtered = events;
+        break;
+    }
+
+    return filtered;
+  };
+
+  // Calculate tab counters
+  const calculateCounters = (events: Event[]): TabCounters => {
+    if (!events) {
+      return {
+        'requires-action': 0,
+        'pending': 0,
+        'published': 0,
+        'historic': 0,
+      };
+    }
+
+    return {
+      'requires-action': filterEventsByTab(events, 'requires-action').length,
+      'pending': filterEventsByTab(events, 'pending').length,
+      'published': filterEventsByTab(events, 'published').length,
+      'historic': filterEventsByTab(events, 'historic').length,
+    };
+  };
+
+  // Handler functions for event actions
+  const handleApproveEvent = (event: Event) => {
+    // TODO: Implement approval logic
+  };
+
+  const handleRequestChanges = (event: Event) => {
+    // TODO: Implement request changes modal
+  };
+
+  const handleRejectEvent = (event: Event) => {
+    // TODO: Implement rejection logic
+  };
+
+  // Update filtered events and counters when events or activeTab changes
+  useEffect(() => {
+    if (events) {
+      const filtered = filterEventsByTab(events, activeTab);
+      const newCounters = calculateCounters(events);
+
+      setFilteredEvents(filtered);
+      setCounters(newCounters);
+    }
+  }, [events, activeTab]);
+
+  // Set initial tab based on user role and available events
+  useEffect(() => {
+    if (shouldShowDashboardMode() && events && events.length > 0) {
+      const newCounters = calculateCounters(events);
+
+      // Default to tab with highest priority that has events
+      if (newCounters['requires-action'] > 0) {
+        setActiveTab('requires-action');
+      } else if (newCounters['pending'] > 0) {
+        setActiveTab('pending');
+      } else if (newCounters['published'] > 0) {
+        setActiveTab('published');
+      } else {
+        setActiveTab('historic');
+      }
+    } else {
+      // For non-admin users, default to published events
+      setActiveTab('published');
+    }
+  }, [events, user]);
+
+  // If not dashboard mode, show all events (fallback for users without admin roles or when auth is not loaded)
+  if (!shouldShowDashboardMode()) {
+    // For debugging purposes, show all events if user is not authenticated yet
+    const displayEvents = events || [];
+
+    return (
+      <div className="space-y-6">
+        <div className="text-center py-4">
+          <h2 className="text-lg font-medium text-gray-900">
+            {user ? 'Eventos Publicados' : 'Todos los Eventos'}
+          </h2>
+          <p className="text-sm text-gray-600">
+            {user
+              ? 'Eventos aprobados y visibles al público'
+              : 'Vista de todos los eventos (modo de prueba)'
+            }
+          </p>
+        </div>
+
+        <EventsList
+          events={displayEvents}
+          isLoading={isLoading}
+          onViewDetail={onViewDetail}
+          onEditEvent={onEditEvent}
+          onDeleteEvent={onDeleteEvent}
+          onApproveEvent={handleApproveEvent}
+          onRequestChanges={handleRequestChanges}
+          onRejectEvent={handleRejectEvent}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Dashboard Filters */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+        <EventsFilterTabs
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+          counters={counters}
+          isLoading={isLoading}
+        />
+      </div>
+
+      {/* Events Grid */}
+      <EventsList
+        events={filteredEvents}
+        isLoading={isLoading}
+        onViewDetail={onViewDetail}
+        onEditEvent={onEditEvent}
+        onDeleteEvent={onDeleteEvent}
+        onApproveEvent={handleApproveEvent}
+        onRequestChanges={handleRequestChanges}
+        onRejectEvent={handleRejectEvent}
+      />
+
+      {/* Tab-specific empty states */}
+      {!isLoading && filteredEvents.length === 0 && (
+        <div className="text-center py-12">
+          <div className="mx-auto h-24 w-24 text-gray-400 mb-4">
+            {activeTab === 'requires-action' && (
+              <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1}
+                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+              </svg>
+            )}
+            {activeTab === 'pending' && (
+              <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1}
+                  d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            )}
+            {activeTab === 'published' && (
+              <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1}
+                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            )}
+            {activeTab === 'historic' && (
+              <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1}
+                  d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            )}
+          </div>
+
+          <h3 className="text-lg font-medium text-gray-900 mb-2">
+            {activeTab === 'requires-action' && 'No hay eventos que requieran acción'}
+            {activeTab === 'pending' && 'No hay eventos pendientes'}
+            {activeTab === 'published' && 'No hay eventos publicados'}
+            {activeTab === 'historic' && 'No hay eventos históricos'}
+          </h3>
+
+          <p className="text-gray-500">
+            {activeTab === 'requires-action' && 'Todos los eventos están en un estado que no requiere tu intervención inmediata.'}
+            {activeTab === 'pending' && 'No hay eventos aprobados internamente esperando publicación.'}
+            {activeTab === 'published' && 'No hay eventos aprobados y publicados en este momento.'}
+            {activeTab === 'historic' && 'No hay eventos finalizados, rechazados o cancelados.'}
+          </p>
+        </div>
+      )}
+    </div>
+  );
+};
