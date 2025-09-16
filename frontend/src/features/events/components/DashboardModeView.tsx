@@ -17,6 +17,9 @@ interface DashboardModeViewProps {
   onViewDetail: (eventId: number) => void;
   onEditEvent?: (event: Event) => void;
   onDeleteEvent?: (eventId: number) => void;
+  onApproveEvent?: (event: Event) => void;
+  onRequestChanges?: (event: Event) => void;
+  onRejectEvent?: (event: Event) => void;
 }
 
 interface TabCounters {
@@ -31,7 +34,10 @@ export const DashboardModeView = ({
   isLoading = false,
   onViewDetail,
   onEditEvent,
-  onDeleteEvent
+  onDeleteEvent,
+  onApproveEvent,
+  onRequestChanges,
+  onRejectEvent
 }: DashboardModeViewProps) => {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<DashboardTab>('requires-action');
@@ -128,17 +134,17 @@ export const DashboardModeView = ({
     };
   };
 
-  // Handler functions for event actions
+  // Handler functions for event actions - pass through to parent handlers
   const handleApproveEvent = (event: Event) => {
-    // TODO: Implement approval logic
+    onApproveEvent?.(event);
   };
 
   const handleRequestChanges = (event: Event) => {
-    // TODO: Implement request changes modal
+    onRequestChanges?.(event);
   };
 
   const handleRejectEvent = (event: Event) => {
-    // TODO: Implement rejection logic
+    onRejectEvent?.(event);
   };
 
   // Update filtered events and counters when events or activeTab changes

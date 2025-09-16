@@ -12,6 +12,7 @@ import {
   ApprovalModal,
   EventFiltersBar,
   DashboardModeView,
+  EventDetailModal,
 } from '@/features/events/components';
 import { Pagination, Button } from '@/components/ui';
 
@@ -20,7 +21,8 @@ type ViewMode = 'table' | 'dashboard';
 export default function EventsPage() {
   const { user } = useAuth();
   const [viewMode, setViewMode] = useState<ViewMode>('dashboard');
-  const [selectedEventId, setSelectedEventId] = useState<number | null>(null);
+  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
 
   const {
     // State
@@ -82,9 +84,16 @@ export default function EventsPage() {
   };
 
   const handleViewDetail = (eventId: number) => {
-    setSelectedEventId(eventId);
-    // TODO: Implement event detail modal or navigation
-    console.log('View detail for event:', eventId);
+    const event = events.find(e => e.id === eventId);
+    if (event) {
+      setSelectedEvent(event);
+      setIsDetailModalOpen(true);
+    }
+  };
+
+  const closeDetailModal = () => {
+    setSelectedEvent(null);
+    setIsDetailModalOpen(false);
   };
 
   const handleApprovalAction = (event: Event) => {
@@ -242,6 +251,18 @@ export default function EventsPage() {
             onViewDetail={handleViewDetail}
             onEditEvent={handleEditEvent}
             onDeleteEvent={deleteEvent}
+            onApproveEvent={(event) => {
+              // TODO: Implement approval logic or connect to existing
+              openApprovalModal(event);
+            }}
+            onRequestChanges={(event) => {
+              requestChanges(event.id, 'Requested changes from detail modal');
+            }}
+            onRejectEvent={(event) => {
+              if (confirm('¿Estás seguro de que quieres rechazar este evento?')) {
+                rejectEvent(event.id, 'Rejected from detail modal');
+              }
+            }}
           />
         ) : (
           /* Table Mode View (Original) */
@@ -312,22 +333,27 @@ export default function EventsPage() {
           onReject={rejectEvent}
         />
 
-        {/* TODO: Add EventDetailModal for dashboard view detail action */}
-        {selectedEventId && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white p-6 rounded-lg shadow-xl">
-              <h3 className="text-lg font-semibold mb-4">Event Detail</h3>
-              <p>Event ID: {selectedEventId}</p>
-              <p className="text-sm text-gray-600 mb-4">Detail modal implementation pending</p>
-              <button
-                onClick={() => setSelectedEventId(null)}
-                className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        )}
+        <EventDetailModal
+          isOpen={isDetailModalOpen}
+          event={selectedEvent}
+          onClose={closeDetailModal}
+          onEdit={handleEditEvent}
+          onDelete={deleteEvent}
+          onApprove={(event) => {
+            openApprovalModal(event);
+            closeDetailModal();
+          }}
+          onRequestChanges={(event) => {
+            requestChanges(event.id, 'Requested changes from detail modal');
+            closeDetailModal();
+          }}
+          onReject={(event) => {
+            if (confirm('¿Estás seguro de que quieres rechazar este evento?')) {
+              rejectEvent(event.id, 'Rejected from detail modal');
+              closeDetailModal();
+            }
+          }}
+        />
       </div>
     </div>
   );
