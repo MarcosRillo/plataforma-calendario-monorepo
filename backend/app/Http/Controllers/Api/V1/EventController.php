@@ -453,4 +453,405 @@ class EventController extends Controller
             'data' => new EventResource($updatedEvent)
         ]);
     }
+
+    /**
+     * @OA\Patch(
+     *     path="/api/v1/events/{id}/approve",
+     *     summary="Approve event internally",
+     *     tags={"Events"},
+     *     security={{"sanctum":{}}},
+     *     @OA\Parameter(
+     *         name="id",
+     *         in="path",
+     *         description="Event ID",
+     *         required=true,
+     *         @OA\Schema(type="integer")
+     *     ),
+     *     @OA\RequestBody(
+     *         required=false,
+     *         @OA\JsonContent(
+     *             @OA\Property(property="comment", type="string", example="Approved for internal use")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Event approved successfully",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Event approved successfully"),
+     *             @OA\Property(property="data", ref="#/components/schemas/Event")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=422,
+     *         description="Invalid status transition",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Cannot approve event in current state")
+     *         )
+     *     )
+     * )
+     */
+    public function approve(Request $request, string $id): JsonResponse
+    {
+        $event = $this->eventService->getEvent((int) $id);
+        $user = Auth::user();
+        $comment = $request->input('comment', '');
+
+        // Validate transition is possible
+        $currentStatusCode = $event->status->status_code;
+        if ($currentStatusCode !== 'pending_internal_approval') {
+            return response()->json([
+                'message' => 'Cannot approve event in current state: ' . $currentStatusCode
+            ], 422);
+        }
+
+        // Find approved_internal status
+        $approvedStatus = \App\Models\EventStatus::where('status_code', 'approved_internal')->first();
+        if (!$approvedStatus) {
+            return response()->json(['message' => 'Approved status not found'], 500);
+        }
+
+        // Update event status
+        $event->status_id = $approvedStatus->id;
+        $event->approved_by = $user->id;
+        $event->approved_at = now();
+
+        if ($comment) {
+            $currentComments = $this->getApprovalCommentsAsArray($event);
+            $currentComments[] = [
+                'action' => 'approved_internal',
+                'comment' => $comment,
+                'user_id' => $user->id,
+                'user_name' => $user->name,
+                'timestamp' => now()->toISOString()
+            ];
+            $event->approval_comments = $currentComments;
+        }
+
+        $event->save();
+
+        return response()->json([
+            'message' => 'Event approved successfully',
+            'data' => new EventResource($event->fresh(['status', 'organization']))
+        ]);
+    }
+
+    /**
+     * @OA\Patch(
+     *     path="/api/v1/events/{id}/request-public",
+     *     summary="Request public approval for internally approved event",
+     *     tags={"Events"},
+     *     security={{"sanctum":{}}},
+     *     @OA\Parameter(
+     *         name="id",
+     *         in="path",
+     *         description="Event ID",
+     *         required=true,
+     *         @OA\Schema(type="integer")
+     *     ),
+     *     @OA\RequestBody(
+     *         required=false,
+     *         @OA\JsonContent(
+     *             @OA\Property(property="comment", type="string", example="Request for public calendar approval")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Public approval requested successfully",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Public approval requested successfully"),
+     *             @OA\Property(property="data", ref="#/components/schemas/Event")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=422,
+     *         description="Invalid status transition",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Cannot request public approval in current state")
+     *         )
+     *     )
+     * )
+     */
+    public function requestPublicApproval(Request $request, string $id): JsonResponse
+    {
+        $event = $this->eventService->getEvent((int) $id);
+        $user = Auth::user();
+        $comment = $request->input('comment', '');
+
+        // Validate transition is possible
+        $currentStatusCode = $event->status->status_code;
+        if ($currentStatusCode !== 'approved_internal') {
+            return response()->json([
+                'message' => 'Cannot request public approval in current state: ' . $currentStatusCode
+            ], 422);
+        }
+
+        // Find pending_public_approval status
+        $pendingPublicStatus = \App\Models\EventStatus::where('status_code', 'pending_public_approval')->first();
+        if (!$pendingPublicStatus) {
+            return response()->json(['message' => 'Pending public approval status not found'], 500);
+        }
+
+        // Update event status
+        $event->status_id = $pendingPublicStatus->id;
+
+        $currentComments = $this->getApprovalCommentsAsArray($event);
+        $currentComments[] = [
+            'action' => 'request_public_approval',
+            'comment' => $comment ?: 'Solicitud de aprobación para calendario público',
+            'user_id' => $user->id,
+            'user_name' => $user->name,
+            'timestamp' => now()->toISOString()
+        ];
+        $event->approval_comments = $currentComments;
+
+        $event->save();
+
+        return response()->json([
+            'message' => 'Public approval requested successfully',
+            'data' => new EventResource($event->fresh(['status', 'organization']))
+        ]);
+    }
+
+    /**
+     * @OA\Patch(
+     *     path="/api/v1/events/{id}/publish",
+     *     summary="Publish event to public calendar (final approval)",
+     *     tags={"Events"},
+     *     security={{"sanctum":{}}},
+     *     @OA\Parameter(
+     *         name="id",
+     *         in="path",
+     *         description="Event ID",
+     *         required=true,
+     *         @OA\Schema(type="integer")
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Event published successfully",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Event published successfully"),
+     *             @OA\Property(property="data", ref="#/components/schemas/Event")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=422,
+     *         description="Invalid status transition",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Cannot publish event in current state")
+     *         )
+     *     )
+     * )
+     */
+    public function publish(Request $request, string $id): JsonResponse
+    {
+        $event = $this->eventService->getEvent((int) $id);
+        $user = Auth::user();
+
+        // Validate transition is possible (from pending_public_approval to published)
+        $currentStatusCode = $event->status->status_code;
+        if ($currentStatusCode !== 'pending_public_approval') {
+            return response()->json([
+                'message' => 'Cannot publish event in current state: ' . $currentStatusCode . '. Event must be pending public approval.'
+            ], 422);
+        }
+
+        // Find published status
+        $publishedStatus = \App\Models\EventStatus::where('status_code', 'published')->first();
+        if (!$publishedStatus) {
+            return response()->json(['message' => 'Published status not found'], 500);
+        }
+
+        // Update event status
+        $event->status_id = $publishedStatus->id;
+        $event->published_at = now();
+
+        // Handle approval_comments which might be a string or array due to migration data
+        $currentComments = $event->approval_comments;
+        if (is_string($currentComments)) {
+            $currentComments = json_decode($currentComments, true) ?? [];
+        } elseif (is_null($currentComments)) {
+            $currentComments = [];
+        }
+
+        $currentComments[] = [
+            'action' => 'published',
+            'comment' => 'Aprobado para calendario público',
+            'user_id' => $user->id,
+            'user_name' => $user->name,
+            'timestamp' => now()->toISOString()
+        ];
+        $event->approval_comments = $currentComments;
+
+        $event->save();
+
+        return response()->json([
+            'message' => 'Event published successfully',
+            'data' => new EventResource($event->fresh(['status', 'organization']))
+        ]);
+    }
+
+    /**
+     * @OA\Patch(
+     *     path="/api/v1/events/{id}/request-changes",
+     *     summary="Request changes to event",
+     *     tags={"Events"},
+     *     security={{"sanctum":{}}},
+     *     @OA\Parameter(
+     *         name="id",
+     *         in="path",
+     *         description="Event ID",
+     *         required=true,
+     *         @OA\Schema(type="integer")
+     *     ),
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"feedback"},
+     *             @OA\Property(property="feedback", type="string", example="Please update the event description")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Changes requested successfully",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Changes requested successfully"),
+     *             @OA\Property(property="data", ref="#/components/schemas/Event")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=422,
+     *         description="Validation error",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Feedback is required")
+     *         )
+     *     )
+     * )
+     */
+    public function requestChanges(Request $request, string $id): JsonResponse
+    {
+        $request->validate([
+            'feedback' => 'required|string|min:5|max:1000'
+        ]);
+
+        $event = $this->eventService->getEvent((int) $id);
+        $user = Auth::user();
+        $feedback = $request->input('feedback');
+
+        // Find requires_changes status
+        $changesStatus = \App\Models\EventStatus::where('status_code', 'requires_changes')->first();
+        if (!$changesStatus) {
+            return response()->json(['message' => 'Requires changes status not found'], 500);
+        }
+
+        // Update event status
+        $event->status_id = $changesStatus->id;
+
+        $currentComments = $this->getApprovalCommentsAsArray($event);
+        $currentComments[] = [
+            'action' => 'request_changes',
+            'comment' => $feedback,
+            'user_id' => $user->id,
+            'user_name' => $user->name,
+            'timestamp' => now()->toISOString()
+        ];
+        $event->approval_comments = $currentComments;
+
+        $event->save();
+
+        return response()->json([
+            'message' => 'Changes requested successfully',
+            'data' => new EventResource($event->fresh(['status', 'organization']))
+        ]);
+    }
+
+    /**
+     * @OA\Patch(
+     *     path="/api/v1/events/{id}/reject",
+     *     summary="Reject event",
+     *     tags={"Events"},
+     *     security={{"sanctum":{}}},
+     *     @OA\Parameter(
+     *         name="id",
+     *         in="path",
+     *         description="Event ID",
+     *         required=true,
+     *         @OA\Schema(type="integer")
+     *     ),
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"reason"},
+     *             @OA\Property(property="reason", type="string", example="Event does not meet guidelines")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Event rejected successfully",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Event rejected successfully"),
+     *             @OA\Property(property="data", ref="#/components/schemas/Event")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=422,
+     *         description="Validation error",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Reason is required")
+     *         )
+     *     )
+     * )
+     */
+    public function reject(Request $request, string $id): JsonResponse
+    {
+        $request->validate([
+            'reason' => 'required|string|min:5|max:1000'
+        ]);
+
+        $event = $this->eventService->getEvent((int) $id);
+        $user = Auth::user();
+        $reason = $request->input('reason');
+
+        // Find rejected status
+        $rejectedStatus = \App\Models\EventStatus::where('status_code', 'rejected')->first();
+        if (!$rejectedStatus) {
+            return response()->json(['message' => 'Rejected status not found'], 500);
+        }
+
+        // Update event status
+        $event->status_id = $rejectedStatus->id;
+
+        $currentComments = $this->getApprovalCommentsAsArray($event);
+        $currentComments[] = [
+            'action' => 'rejected',
+            'comment' => $reason,
+            'user_id' => $user->id,
+            'user_name' => $user->name,
+            'timestamp' => now()->toISOString()
+        ];
+        $event->approval_comments = $currentComments;
+
+        $event->save();
+
+        return response()->json([
+            'message' => 'Event rejected successfully',
+            'data' => new EventResource($event->fresh(['status', 'organization']))
+        ]);
+    }
+
+    /**
+     * Helper method to safely get approval comments as array
+     * Handles legacy string data and null values
+     */
+    private function getApprovalCommentsAsArray($event): array
+    {
+        $comments = $event->approval_comments;
+
+        if (is_string($comments)) {
+            return json_decode($comments, true) ?? [];
+        } elseif (is_array($comments)) {
+            return $comments;
+        }
+
+        return [];
+    }
 }

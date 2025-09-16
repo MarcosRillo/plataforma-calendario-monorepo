@@ -69,6 +69,7 @@ class Event extends Model
         'created_by',
         'approved_by',
         'approved_at',
+        'published_at',
     ];
 
     /**
@@ -84,6 +85,7 @@ class Event extends Model
         'is_featured' => 'boolean',
         'max_attendees' => 'integer',
         'approved_at' => 'datetime',
+        'published_at' => 'datetime',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];

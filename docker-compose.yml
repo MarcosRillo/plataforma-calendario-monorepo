@@ -1,23 +1,22 @@
 services:
-  # Base de datos MySQL
+  # Base de datos PostgreSQL
   db:
-    image: mysql:8.0
+    image: postgres:15
     container_name: plataforma-calendario-db
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: root_password
-      MYSQL_DATABASE: plataforma_calendario
-      MYSQL_USER: laravel_user
-      MYSQL_PASSWORD: laravel_password
+      POSTGRES_DB: plataforma_calendario
+      POSTGRES_USER: app_user
+      POSTGRES_PASSWORD: app_password
     volumes:
-      - mysql_data:/var/lib/mysql
+      - db_data:/var/lib/postgresql/data
     ports:
-      - "3306:3306"
+      - "5432:5432"
     networks:
       - plataforma-network
-    # Healthcheck para la base de datos
+    # Healthcheck para PostgreSQL
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}"]
+      test: ["CMD-SHELL", "pg_isready -U app_user -d plataforma_calendario"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -34,16 +33,16 @@ services:
     volumes:
       - ./backend:/var/www
     environment:
-      - DB_CONNECTION=mysql
+      - DB_CONNECTION=pgsql
       - DB_HOST=db
-      - DB_PORT=3306
+      - DB_PORT=5432
       - DB_DATABASE=plataforma_calendario
-      - DB_USERNAME=laravel_user
-      - DB_PASSWORD=laravel_password
+      - DB_USERNAME=app_user
+      - DB_PASSWORD=app_password
     networks:
       - plataforma-network
-    expose:
-      - "9000"
+    ports:
+      - "8000:9000"  # Mapear puerto 8000 externo al 9000 interno
     depends_on:
       db:
         condition: service_healthy # Espera a que la BD esté lista
@@ -92,7 +91,7 @@ services:
         condition: service_healthy # Espera a que Next.js esté listo
 
 volumes:
-  mysql_data:
+  db_data:
     driver: local
 
 networks:

@@ -5,6 +5,7 @@ import { PlusIcon, ClockIcon, CheckCircleIcon, ShareIcon, XCircleIcon, ViewColum
 import { useAuth } from '@/context/AuthContext';
 import { Event } from '@/types/event.types';
 import { useEventManager } from '@/features/events/hooks/useEventManager';
+import { useApprovalManager } from '@/features/events/hooks/useApprovalManager';
 import {
   EventTable,
   CreateEventForm,
@@ -23,6 +24,30 @@ export default function EventsPage() {
   const [viewMode, setViewMode] = useState<ViewMode>('dashboard');
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+
+  // Double-level approval workflow hook
+  const {
+    approveInternal: workflowApproveInternal,
+    requestPublicApproval: workflowRequestPublicApproval,
+    publishEvent: workflowPublishEvent,
+    requestChanges: workflowRequestChanges,
+    rejectEvent: workflowRejectEvent,
+    toggleFeatured,
+    isLoading: approvalLoading,
+    error: approvalError,
+    canApproveInternal,
+    canRequestPublicApproval,
+    canPublish,
+    canRequestChanges: workflowCanRequestChanges,
+    canReject: workflowCanReject,
+    isInternallyApproved,
+    isPublished,
+    getWorkflowStage,
+    clearError: clearApprovalError,
+    // Legacy compatibility
+    approveEvent,
+    canApprove
+  } = useApprovalManager();
 
   const {
     // State
@@ -94,10 +119,70 @@ export default function EventsPage() {
   const closeDetailModal = () => {
     setSelectedEvent(null);
     setIsDetailModalOpen(false);
+    clearApprovalError();
   };
 
   const handleApprovalAction = (event: Event) => {
     openApprovalModal(event);
+  };
+
+  // Double-level approval handlers
+  const handleApproveInternal = async (event: Event) => {
+    const updatedEvent = await workflowApproveInternal(event.id, 'Aprobado para calendario interno');
+    if (updatedEvent) {
+      refreshData(); // Refresh events list
+    }
+  };
+
+  const handleRequestPublicApproval = async (event: Event) => {
+    const comment = prompt('Comentario opcional para la solicitud de aprobación pública:') || '';
+    const updatedEvent = await workflowRequestPublicApproval(event.id, comment || 'Solicitud de aprobación para calendario público');
+    if (updatedEvent) {
+      refreshData();
+    }
+  };
+
+  const handlePublishEvent = async (event: Event) => {
+    if (confirm('¿Estás seguro de que quieres publicar este evento en el calendario público?')) {
+      const updatedEvent = await workflowPublishEvent(event.id);
+      if (updatedEvent) {
+        refreshData();
+      }
+    }
+  };
+
+  // Legacy handler for backward compatibility
+  const handleApproveEvent = async (event: Event) => {
+    return handleApproveInternal(event);
+  };
+
+  const handleRequestChangesEvent = async (event: Event) => {
+    const feedback = prompt('Ingresa los cambios solicitados:');
+    if (!feedback) return;
+
+    const updatedEvent = await workflowRequestChanges(event.id, feedback);
+    if (updatedEvent) {
+      refreshData();
+    }
+  };
+
+  const handleRejectEvent = async (event: Event) => {
+    const reason = prompt('Ingresa el motivo del rechazo:');
+    if (!reason) return;
+
+    if (confirm('¿Estás seguro de que quieres rechazar este evento?')) {
+      const updatedEvent = await workflowRejectEvent(event.id, reason);
+      if (updatedEvent) {
+        refreshData();
+      }
+    }
+  };
+
+  const handleToggleFeatured = async (event: Event) => {
+    const updatedEvent = await toggleFeatured(event.id);
+    if (updatedEvent) {
+      refreshData();
+    }
   };
 
   return (
@@ -153,6 +238,35 @@ export default function EventsPage() {
             </Button>
           </div>
         </div>
+
+        {/* Approval Error Notification */}
+        {approvalError && (
+          <div className="mb-6 bg-red-50 border border-red-200 rounded-md p-4">
+            <div className="flex">
+              <div className="flex-shrink-0">
+                <XCircleIcon className="h-5 w-5 text-red-400" />
+              </div>
+              <div className="ml-3">
+                <h3 className="text-sm font-medium text-red-800">Error en la operación</h3>
+                <div className="mt-2 text-sm text-red-700">
+                  <p>{approvalError.message}</p>
+                  {approvalError.details && (
+                    <p className="mt-1 text-xs text-red-600">{approvalError.details}</p>
+                  )}
+                </div>
+              </div>
+              <div className="ml-auto pl-3">
+                <button
+                  type="button"
+                  onClick={clearApprovalError}
+                  className="inline-flex bg-red-50 rounded-md p-1.5 text-red-500 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-red-50 focus:ring-red-600"
+                >
+                  <XCircleIcon className="h-5 w-5" />
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Statistics */}
         {statistics && (
@@ -251,18 +365,13 @@ export default function EventsPage() {
             onViewDetail={handleViewDetail}
             onEditEvent={handleEditEvent}
             onDeleteEvent={deleteEvent}
-            onApproveEvent={(event) => {
-              // TODO: Implement approval logic or connect to existing
-              openApprovalModal(event);
-            }}
-            onRequestChanges={(event) => {
-              requestChanges(event.id, 'Requested changes from detail modal');
-            }}
-            onRejectEvent={(event) => {
-              if (confirm('¿Estás seguro de que quieres rechazar este evento?')) {
-                rejectEvent(event.id, 'Rejected from detail modal');
-              }
-            }}
+            onApproveInternal={handleApproveInternal}
+            onRequestPublicApproval={handleRequestPublicApproval}
+            onPublishEvent={handlePublishEvent}
+            onRequestChanges={handleRequestChangesEvent}
+            onRejectEvent={handleRejectEvent}
+            // Legacy compatibility
+            onApproveEvent={handleApproveEvent}
           />
         ) : (
           /* Table Mode View (Original) */
@@ -339,19 +448,30 @@ export default function EventsPage() {
           onClose={closeDetailModal}
           onEdit={handleEditEvent}
           onDelete={deleteEvent}
-          onApprove={(event) => {
-            openApprovalModal(event);
+          onApproveInternal={async (event) => {
+            await handleApproveInternal(event);
             closeDetailModal();
           }}
-          onRequestChanges={(event) => {
-            requestChanges(event.id, 'Requested changes from detail modal');
+          onRequestPublicApproval={async (event) => {
+            await handleRequestPublicApproval(event);
             closeDetailModal();
           }}
-          onReject={(event) => {
-            if (confirm('¿Estás seguro de que quieres rechazar este evento?')) {
-              rejectEvent(event.id, 'Rejected from detail modal');
-              closeDetailModal();
-            }
+          onPublishEvent={async (event) => {
+            await handlePublishEvent(event);
+            closeDetailModal();
+          }}
+          onRequestChanges={async (event) => {
+            await handleRequestChangesEvent(event);
+            closeDetailModal();
+          }}
+          onReject={async (event) => {
+            await handleRejectEvent(event);
+            closeDetailModal();
+          }}
+          // Legacy compatibility
+          onApprove={async (event) => {
+            await handleApproveEvent(event);
+            closeDetailModal();
           }}
         />
       </div>

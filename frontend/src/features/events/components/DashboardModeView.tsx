@@ -17,9 +17,14 @@ interface DashboardModeViewProps {
   onViewDetail: (eventId: number) => void;
   onEditEvent?: (event: Event) => void;
   onDeleteEvent?: (eventId: number) => void;
-  onApproveEvent?: (event: Event) => void;
+  // Double-Level Workflow Actions
+  onApproveInternal?: (event: Event) => void;
+  onRequestPublicApproval?: (event: Event) => void;
+  onPublishEvent?: (event: Event) => void;
   onRequestChanges?: (event: Event) => void;
   onRejectEvent?: (event: Event) => void;
+  // Legacy compatibility
+  onApproveEvent?: (event: Event) => void;
 }
 
 interface TabCounters {
@@ -35,9 +40,13 @@ export const DashboardModeView = ({
   onViewDetail,
   onEditEvent,
   onDeleteEvent,
-  onApproveEvent,
+  onApproveInternal,
+  onRequestPublicApproval,
+  onPublishEvent,
   onRequestChanges,
-  onRejectEvent
+  onRejectEvent,
+  // Legacy compatibility
+  onApproveEvent
 }: DashboardModeViewProps) => {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<DashboardTab>('requires-action');
@@ -71,35 +80,43 @@ export const DashboardModeView = ({
 
     switch (tab) {
       case 'requires-action':
-        // Events that need internal approval or other action
-        filtered = events.filter(event =>
-          event.status?.status_code === 'pending_internal_approval' ||
-          event.status?.status_code === 'pending_public_approval' ||
-          event.status?.status_code === 'requires_changes'
-        );
+        // Events that need immediate action from administrators
+        filtered = events.filter(event => {
+          const statusCode = event.status?.status_code;
+          return (
+            statusCode === 'pending_internal_approval' ||  // Need internal approval
+            statusCode === 'pending_public_approval' ||    // Need public approval
+            statusCode === 'requires_changes'              // Need changes from submitter
+          );
+        });
         break;
 
       case 'pending':
-        // Events approved internally but not yet published
-        filtered = events.filter(event =>
-          event.status?.status_code === 'approved_internal' ||
-          event.status?.status_code === 'draft'
-        );
+        // Events approved internally but not yet in public calendar
+        filtered = events.filter(event => {
+          const statusCode = event.status?.status_code;
+          return (
+            statusCode === 'approved_internal' ||  // Ready for public request
+            statusCode === 'draft'                 // Still being drafted
+          );
+        });
         break;
 
       case 'published':
-        // Events that are live and visible to public
-        filtered = events.filter(event =>
-          event.status?.status_code === 'published'
-        );
+        // Events that are live and visible to public calendar
+        filtered = events.filter(event => {
+          const statusCode = event.status?.status_code;
+          return statusCode === 'published';
+        });
         break;
 
       case 'historic':
         // Events that are finished, rejected, or cancelled
         filtered = events.filter(event => {
+          const statusCode = event.status?.status_code;
           const isRejectedOrCancelled =
-            event.status?.status_code === 'rejected' ||
-            event.status?.status_code === 'cancelled';
+            statusCode === 'rejected' ||
+            statusCode === 'cancelled';
 
           const hasEnded = new Date(event.end_date) < new Date();
 
@@ -135,8 +152,16 @@ export const DashboardModeView = ({
   };
 
   // Handler functions for event actions - pass through to parent handlers
-  const handleApproveEvent = (event: Event) => {
-    onApproveEvent?.(event);
+  const handleApproveInternal = (event: Event) => {
+    onApproveInternal?.(event);
+  };
+
+  const handleRequestPublicApproval = (event: Event) => {
+    onRequestPublicApproval?.(event);
+  };
+
+  const handlePublishEvent = (event: Event) => {
+    onPublishEvent?.(event);
   };
 
   const handleRequestChanges = (event: Event) => {
@@ -145,6 +170,11 @@ export const DashboardModeView = ({
 
   const handleRejectEvent = (event: Event) => {
     onRejectEvent?.(event);
+  };
+
+  // Legacy handler for backward compatibility
+  const handleApproveEvent = (event: Event) => {
+    onApproveEvent?.(event) || onApproveInternal?.(event);
   };
 
   // Update filtered events and counters when events or activeTab changes
@@ -204,9 +234,13 @@ export const DashboardModeView = ({
           onViewDetail={onViewDetail}
           onEditEvent={onEditEvent}
           onDeleteEvent={onDeleteEvent}
-          onApproveEvent={handleApproveEvent}
+          onApproveInternal={handleApproveInternal}
+          onRequestPublicApproval={handleRequestPublicApproval}
+          onPublishEvent={handlePublishEvent}
           onRequestChanges={handleRequestChanges}
           onRejectEvent={handleRejectEvent}
+          // Legacy compatibility
+          onApproveEvent={handleApproveEvent}
         />
       </div>
     );
@@ -231,9 +265,13 @@ export const DashboardModeView = ({
         onViewDetail={onViewDetail}
         onEditEvent={onEditEvent}
         onDeleteEvent={onDeleteEvent}
-        onApproveEvent={handleApproveEvent}
+        onApproveInternal={handleApproveInternal}
+        onRequestPublicApproval={handleRequestPublicApproval}
+        onPublishEvent={handlePublishEvent}
         onRequestChanges={handleRequestChanges}
         onRejectEvent={handleRejectEvent}
+        // Legacy compatibility
+        onApproveEvent={handleApproveEvent}
       />
 
       {/* Tab-specific empty states */}
@@ -274,9 +312,9 @@ export const DashboardModeView = ({
           </h3>
 
           <p className="text-gray-500">
-            {activeTab === 'requires-action' && 'Todos los eventos están en un estado que no requiere tu intervención inmediata.'}
-            {activeTab === 'pending' && 'No hay eventos aprobados internamente esperando publicación.'}
-            {activeTab === 'published' && 'No hay eventos aprobados y publicados en este momento.'}
+            {activeTab === 'requires-action' && 'Todos los eventos están en un estado que no requiere tu intervención inmediata. Aquí aparecerán eventos pendientes de aprobación interna, pública o que requieran cambios.'}
+            {activeTab === 'pending' && 'No hay eventos en estado intermedio. Aquí aparecerán eventos aprobados internamente pero aún no solicitados para el calendario público.'}
+            {activeTab === 'published' && 'No hay eventos publicados en el calendario público en este momento.'}
             {activeTab === 'historic' && 'No hay eventos finalizados, rechazados o cancelados.'}
           </p>
         </div>

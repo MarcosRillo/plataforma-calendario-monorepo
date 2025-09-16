@@ -32,9 +32,17 @@ Route::prefix('v1')->group(function () {
     Route::middleware('auth:sanctum')->group(function () {
         // Events - specific routes first, then resource routes
         Route::get('events/statistics', [EventController::class, 'statistics']);
-        Route::get('events/approval/statistics', [EventApprovalController::class, 'getApprovalStatistics']);
+        Route::patch('events/{id}/toggle-featured', [EventController::class, 'toggleFeatured']);
 
-        // Event Approval Routes (frontend Phase 3)
+        // Event Approval Workflow Routes
+        Route::patch('events/{id}/approve', [EventController::class, 'approve']);
+        Route::patch('events/{id}/request-public', [EventController::class, 'requestPublicApproval']);
+        Route::patch('events/{id}/publish', [EventController::class, 'publish']);
+        Route::patch('events/{id}/request-changes', [EventController::class, 'requestChanges']);
+        Route::patch('events/{id}/reject', [EventController::class, 'reject']);
+
+        // Legacy approval routes (keep for backward compatibility)
+        Route::get('events/approval/statistics', [EventApprovalController::class, 'getApprovalStatistics']);
         Route::post('events/{event}/approve', [EventApprovalController::class, 'approve']);
         Route::post('events/{event}/reject', [EventApprovalController::class, 'reject']);
         Route::post('events/{event}/request-changes', [EventApprovalController::class, 'requestChanges']);

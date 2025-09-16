@@ -13,9 +13,14 @@ interface EventDetailModalProps {
   onClose: () => void;
   onEdit?: (event: Event) => void;
   onDelete?: (eventId: number) => void;
-  onApprove?: (event: Event) => void;
+  // Double-Level Workflow Actions
+  onApproveInternal?: (event: Event) => void;
+  onRequestPublicApproval?: (event: Event) => void;
+  onPublishEvent?: (event: Event) => void;
   onRequestChanges?: (event: Event) => void;
   onReject?: (event: Event) => void;
+  // Legacy compatibility
+  onApprove?: (event: Event) => void;
 }
 
 export const EventDetailModal = ({
@@ -24,9 +29,13 @@ export const EventDetailModal = ({
   onClose,
   onEdit,
   onDelete,
-  onApprove,
+  onApproveInternal,
+  onRequestPublicApproval,
+  onPublishEvent,
   onRequestChanges,
-  onReject
+  onReject,
+  // Legacy compatibility
+  onApprove
 }: EventDetailModalProps) => {
   if (!event) return null;
 
@@ -109,6 +118,33 @@ export const EventDetailModal = ({
       'cancelled': 'Cancelado'
     };
     return statusLabels[statusCode] || statusCode;
+  };
+
+  // Double-level workflow helper functions
+  const getEventStatus = () => {
+    return event.status?.status_code || event.approval_status;
+  };
+
+  const canApproveInternal = () => {
+    return getEventStatus() === 'pending_internal_approval';
+  };
+
+  const canRequestPublicApproval = () => {
+    return getEventStatus() === 'approved_internal';
+  };
+
+  const canPublish = () => {
+    return getEventStatus() === 'pending_public_approval';
+  };
+
+  const canRequestChanges = () => {
+    const status = getEventStatus();
+    return !['rejected', 'published', 'cancelled'].includes(status);
+  };
+
+  const canReject = () => {
+    const status = getEventStatus();
+    return !['rejected', 'published', 'cancelled'].includes(status);
   };
 
   const dateInfo = formatEventDate(event.start_date, event.end_date);
@@ -337,9 +373,76 @@ export const EventDetailModal = ({
                     Cerrar
                   </Button>
 
-                  {/* Conditional Action Buttons */}
-                  {isEnteEvent ? (
-                    // Internal Event Actions
+                  {/* Double-Level Workflow Action Buttons */}
+
+                  {/* Primary Workflow Actions */}
+                  {canApproveInternal() && onApproveInternal && (
+                    <Button
+                      variant="primary"
+                      onClick={() => {
+                        onApproveInternal(event);
+                      }}
+                      className="bg-green-600 hover:bg-green-700"
+                    >
+                      Aprobar Interno
+                    </Button>
+                  )}
+
+                  {canRequestPublicApproval() && onRequestPublicApproval && (
+                    <Button
+                      variant="primary"
+                      onClick={() => {
+                        onRequestPublicApproval(event);
+                      }}
+                      className="bg-blue-600 hover:bg-blue-700"
+                    >
+                      Solicitar Público
+                    </Button>
+                  )}
+
+                  {canPublish() && onPublishEvent && (
+                    <Button
+                      variant="primary"
+                      onClick={() => {
+                        if (confirm('¿Estás seguro de que quieres publicar este evento en el calendario público?')) {
+                          onPublishEvent(event);
+                        }
+                      }}
+                      className="bg-purple-600 hover:bg-purple-700"
+                    >
+                      Publicar
+                    </Button>
+                  )}
+
+                  {/* Secondary Actions */}
+                  {canRequestChanges() && onRequestChanges && (
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        onRequestChanges(event);
+                      }}
+                      className="text-yellow-600 border-yellow-300 hover:bg-yellow-50"
+                    >
+                      Solicitar Cambios
+                    </Button>
+                  )}
+
+                  {canReject() && onReject && (
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        if (confirm('¿Estás seguro de que quieres rechazar este evento?')) {
+                          onReject(event);
+                        }
+                      }}
+                      className="text-red-600 border-red-300 hover:bg-red-50"
+                    >
+                      Rechazar
+                    </Button>
+                  )}
+
+                  {/* Management Actions (for internal events) */}
+                  {isEnteEvent && (
                     <>
                       {onEdit && (
                         <Button
@@ -369,50 +472,19 @@ export const EventDetailModal = ({
                         </Button>
                       )}
                     </>
-                  ) : (
-                    // External Event Actions
-                    <>
-                      {onApprove && (
-                        <Button
-                          variant="primary"
-                          onClick={() => {
-                            onApprove(event);
-                            onClose();
-                          }}
-                          className="bg-green-600 hover:bg-green-700"
-                        >
-                          Aprobar
-                        </Button>
-                      )}
+                  )}
 
-                      {onRequestChanges && (
-                        <Button
-                          variant="outline"
-                          onClick={() => {
-                            onRequestChanges(event);
-                            onClose();
-                          }}
-                          className="text-yellow-600 border-yellow-300 hover:bg-yellow-50"
-                        >
-                          Solicitar Cambios
-                        </Button>
-                      )}
-
-                      {onReject && (
-                        <Button
-                          variant="outline"
-                          onClick={() => {
-                            if (confirm('¿Estás seguro de que quieres rechazar este evento?')) {
-                              onReject(event);
-                              onClose();
-                            }
-                          }}
-                          className="text-red-600 border-red-300 hover:bg-red-50"
-                        >
-                          Rechazar
-                        </Button>
-                      )}
-                    </>
+                  {/* Legacy Action (fallback) */}
+                  {!canApproveInternal() && !canRequestPublicApproval() && !canPublish() && onApprove && (
+                    <Button
+                      variant="primary"
+                      onClick={() => {
+                        onApprove(event);
+                      }}
+                      className="bg-green-600 hover:bg-green-700"
+                    >
+                      Aprobar (Legacy)
+                    </Button>
                   )}
                 </div>
               </Dialog.Panel>
