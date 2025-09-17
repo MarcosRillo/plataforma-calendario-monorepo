@@ -4,6 +4,8 @@
  * Provides fallback handling and proper error states
  */
 
+'use client';
+
 import { useState } from 'react';
 import Image from 'next/image';
 

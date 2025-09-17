@@ -4,11 +4,13 @@ import { useState, useEffect } from 'react';
 import { Calendar as CalendarIcon, Share2, Download } from 'lucide-react';
 import PublicCalendar from './components/PublicCalendar';
 import PublicEventFilters, { PublicEventFiltersState } from './components/PublicEventFilters';
-import EventDetailModal from './components/EventDetailModal';
+import { EventDetailModal } from '@/components/ui';
 import { Event } from '@/types/event.types';
 import { eventPublicService, eventPublicExportService } from '@/features/events/services/eventPublicService';
+import { useToast } from '@/components/ui';
 
 export default function CalendarPageClient() {
+  const { addToast } = useToast();
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [filters, setFilters] = useState<PublicEventFiltersState>({
@@ -71,9 +73,18 @@ export default function CalendarPageClient() {
     } else {
       try {
         await navigator.clipboard.writeText(url);
-        alert('Enlace copiado al portapapeles');
+        addToast({
+          message: 'Enlace copiado al portapapeles',
+          type: 'success',
+          duration: 3000,
+        });
       } catch (error) {
         console.error('Error copying to clipboard:', error);
+        addToast({
+          message: 'Error al copiar el enlace',
+          type: 'error',
+          duration: 5000,
+        });
       }
     }
   };
@@ -164,6 +175,9 @@ export default function CalendarPageClient() {
         isOpen={isModalOpen}
         onClose={handleCloseModal}
         event={selectedEvent}
+        context="public"
+        showSharing={true}
+        showExport={true}
       />
     </div>
   );

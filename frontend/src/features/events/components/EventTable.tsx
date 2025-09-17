@@ -1,10 +1,10 @@
 'use client';
 
-import { useMemo, type ReactNode } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { Event, EVENT_STATUS, EVENT_TYPE } from '@/types/event.types';
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { Button, LoadingSpinner } from '@/components/ui';
+import { Button, LoadingSpinner, ConfirmDialog } from '@/components/ui';
 import { PermissionGate } from '@/components/auth/PermissionGate';
 import { Permission } from '@/types/auth.types';
 
@@ -91,6 +91,19 @@ export const EventTable = ({
   showActions = true,
   compactView = false,
 }: EventTableProps) => {
+  // Confirm dialog state
+  const [confirmDialog, setConfirmDialog] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+  });
+
   // usePermissions not needed here as PermissionGate handles permission checks
   const formatDate = (dateString: string) => {
     try {
@@ -241,9 +254,15 @@ export const EventTable = ({
             className: 'text-red-600 hover:text-red-900',
             permission: 'events.delete',
             onClick: (event) => {
-              if (confirm('¿Estás seguro de que quieres eliminar este evento?')) {
-                onDeleteEvent?.(event.id);
-              }
+              setConfirmDialog({
+                isOpen: true,
+                title: 'Eliminar Evento',
+                message: '¿Estás seguro de que quieres eliminar este evento?',
+                onConfirm: () => {
+                  setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+                  onDeleteEvent?.(event.id);
+                },
+              });
             },
           },
         ];
@@ -300,9 +319,15 @@ export const EventTable = ({
                      status === EVENT_STATUS.REJECTED;
             },
             onClick: (event) => {
-              if (confirm('¿Estás seguro de que quieres eliminar este evento?')) {
-                onDeleteEvent?.(event.id);
-              }
+              setConfirmDialog({
+                isOpen: true,
+                title: 'Eliminar Evento',
+                message: '¿Estás seguro de que quieres eliminar este evento?',
+                onConfirm: () => {
+                  setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+                  onDeleteEvent?.(event.id);
+                },
+              });
             },
           },
         ];
@@ -632,6 +657,16 @@ export const EventTable = ({
           })}
         </tbody>
       </table>
+
+      {/* Confirm Dialog */}
+      <ConfirmDialog
+        isOpen={confirmDialog.isOpen}
+        title={confirmDialog.title}
+        message={confirmDialog.message}
+        variant="danger"
+        onConfirm={confirmDialog.onConfirm}
+        onCancel={() => setConfirmDialog(prev => ({ ...prev, isOpen: false }))}
+      />
     </div>
   );
 };

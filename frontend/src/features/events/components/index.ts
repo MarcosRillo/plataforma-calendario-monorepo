@@ -4,7 +4,7 @@ export { CreateEventForm } from './CreateEventForm';
 export { EditEventForm } from './EditEventForm';
 export { ApprovalModal } from './ApprovalModal';
 export { EventFiltersBar } from './EventFiltersBar';
-export { EventDetailModal } from './EventDetailModal';
+// EventDetailModal moved to @/components/ui (unified implementation)
 
 // Dashboard Components (migrated from dashboard/)
 export { EventCard } from './EventCard';

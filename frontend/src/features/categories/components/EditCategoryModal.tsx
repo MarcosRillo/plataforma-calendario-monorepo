@@ -1,12 +1,11 @@
 /**
- * EditCategoryModal Component
- * Modal component for editing existing categories using the new Modal structure
+ * EditCategoryModal Component - Migrated to FormModal pattern
+ * Uses unified FormModal component for consistent form handling
  */
 
-import { useState, useEffect, FormEvent } from 'react';
 import { updateCategory, validateCategoryData } from '../services/category.service';
-import { Category, UpdateCategoryData, CategoryFormErrors } from '@/types/category.types';
-import { Modal, Button, Input, Textarea, ColorInput, Checkbox } from '@/components/ui';
+import { Category, UpdateCategoryData } from '@/types/category.types';
+import { FormModal, FormSubmitHandler, FormValidator, Input, Textarea, ColorInput, Checkbox } from '@/components/ui';
 
 interface EditCategoryModalProps {
   isOpen: boolean;
@@ -16,6 +15,11 @@ interface EditCategoryModalProps {
   onCategoryUpdated?: () => void;
 }
 
+// Form validator using existing validation service
+const categoryValidator: FormValidator<UpdateCategoryData> = (data) => {
+  return validateCategoryData(data);
+};
+
 const EditCategoryModal: React.FC<EditCategoryModalProps> = ({
   isOpen,
   onClose,
@@ -23,156 +27,48 @@ const EditCategoryModal: React.FC<EditCategoryModalProps> = ({
   category,
   onCategoryUpdated,
 }) => {
-  const [formData, setFormData] = useState<UpdateCategoryData>({
-    name: '',
-    description: '',
-    color: '#3B82F6',
-    is_active: true,
-  });
-
-  const [errors, setErrors] = useState<CategoryFormErrors>({});
-  const [isLoading, setIsLoading] = useState(false);
-  const [apiError, setApiError] = useState<string>('');
-
-  // Update form data when category changes - CORRECTED MAPPING
-  useEffect(() => {
-    if (category) {
-      setFormData({
-        name: category.name,
-        description: category.description || '',
-        color: category.color || '#3B82F6',
-        is_active: category.is_active,
-      });
-      setErrors({});
-      setApiError('');
+  // Submit handler
+  const handleSubmit: FormSubmitHandler<UpdateCategoryData> = async (formData) => {
+    if (!category) {
+      throw new Error('No se encontró la categoría a editar');
     }
-  }, [category]);
 
-  const handleInputChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
-  ): void => {
-    const { name, value, type } = e.target;
-    
-    setFormData((prev) => ({
-      ...prev,
-      [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : value,
-    }));
-
-    // Clear error when user starts typing
-    if (errors[name as keyof CategoryFormErrors]) {
-      setErrors((prev) => ({
-        ...prev,
-        [name]: '',
-      }));
-    }
-    setApiError('');
-  };
-
-  const validateForm = (): boolean => {
-    const validationErrors = validateCategoryData(formData);
-    const errorMap: CategoryFormErrors = {};
-
-    validationErrors.forEach((error) => {
-      if (error.includes('name')) {
-        errorMap.name = error;
-      } else if (error.includes('description')) {
-        errorMap.description = error;
-      } else if (error.includes('color')) {
-        errorMap.color = error;
-      }
+    await updateCategory(category.id, {
+      ...formData,
+      description: formData.description?.trim() || undefined,
     });
 
-    setErrors(errorMap);
-    return validationErrors.length === 0;
+    // Notify parent component
+    if (onCategoryUpdated) {
+      onCategoryUpdated();
+    }
   };
 
-  const handleSubmit = async (e?: FormEvent<HTMLFormElement>): Promise<void> => {
-    if (e) {
-      e.preventDefault();
-    }
-    
+  // Success handler
+  const handleSuccess = () => {
+    onSuccess();
+  };
+
+  // Create initial data from category
+  const getInitialData = (): UpdateCategoryData => {
     if (!category) {
-      setApiError('Error: No se encontró la categoría a editar');
-      return;
-    }
-
-    setApiError('');
-
-    if (!validateForm()) {
-      return;
-    }
-
-    setIsLoading(true);
-
-    try {
-      await updateCategory(category.id, {
-        ...formData,
-        description: formData.description?.trim() || undefined,
-      });
-      
-      // Notify parent component to reload categories
-      if (onCategoryUpdated) {
-        onCategoryUpdated();
-      }
-      
-      onSuccess();
-      handleClose();
-    } catch (error: unknown) {
-      // Type guard function for API errors
-      const isApiError = (err: unknown): err is { 
-        response?: { 
-          status?: number; 
-          data?: { 
-            errors?: Record<string, string[]>; 
-            message?: string; 
-          }; 
-        }; 
-      } => {
-        return (
-          err !== null &&
-          typeof err === 'object' &&
-          'response' in err &&
-          err.response !== null &&
-          typeof err.response === 'object'
-        );
-      };
-
-      if (isApiError(error) && error.response?.status === 422 && error.response.data?.errors) {
-        const serverErrors: CategoryFormErrors = {};
-        const errorData = error.response.data.errors;
-
-        Object.keys(errorData).forEach((field) => {
-          if (field in serverErrors || ['name', 'description', 'color', 'is_active'].includes(field)) {
-            serverErrors[field as keyof CategoryFormErrors] = errorData[field][0];
-          }
-        });
-
-        setErrors(serverErrors);
-      } else {
-        const errorMessage = isApiError(error) && error.response?.data?.message 
-          ? error.response.data.message 
-          : 'Error al actualizar la categoría. Inténtalo de nuevo.';
-        setApiError(errorMessage);
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleClose = (): void => {
-    if (!isLoading) {
-      setFormData({
+      return {
         name: '',
         description: '',
         color: '#3B82F6',
         is_active: true,
-      });
-      setErrors({});
-      setApiError('');
-      onClose();
+      };
     }
+
+    return {
+      name: category.name,
+      description: category.description || '',
+      color: category.color || '#3B82F6',
+      is_active: category.is_active,
+    };
   };
 
+  // Predefined colors for color picker
   const predefinedColors = [
     '#3B82F6', // Blue
     '#EF4444', // Red
@@ -186,116 +82,83 @@ const EditCategoryModal: React.FC<EditCategoryModalProps> = ({
     '#6B7280', // Gray
   ];
 
-  if (!isOpen || !category) return null;
-
-  // Form content to be rendered inside Modal
-  const formContent = (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      {/* API Error Alert */}
-      {apiError && (
-        <div className="bg-red-50 border border-red-200 rounded-md p-3">
-          <div className="flex">
-            <svg className="w-5 h-5 text-red-400" fill="currentColor" viewBox="0 0 20 20">
-              <path
-                fillRule="evenodd"
-                d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-                clipRule="evenodd"
-              />
-            </svg>
-            <div className="ml-3">
-              <p className="text-sm text-red-600">{apiError}</p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Name Field */}
-      <div>
-        <Input
-          label="Nombre *"
-          type="text"
-          id="name"
-          name="name"
-          value={formData.name}
-          onChange={handleInputChange}
-          placeholder="Ej. Reuniones"
-          disabled={isLoading}
-          error={errors.name}
-          fullWidth
-        />
-      </div>
-
-      {/* Description Field */}
-      <div>
-        <Textarea
-          id="description"
-          name="description"
-          label="Descripción"
-          value={formData.description}
-          onChange={handleInputChange}
-          rows={3}
-          disabled={isLoading}
-          error={errors.description}
-          placeholder="Describe el propósito de esta categoría..."
-          fullWidth
-        />
-      </div>
-
-      {/* Color Field */}
-      <ColorInput
-        label="Color"
-        value={formData.color || '#3B82F6'}
-        onChange={(color) => setFormData((prev) => ({ ...prev, color }))}
-        predefinedColors={predefinedColors}
-        disabled={isLoading}
-        error={errors.color}
-      />
-
-      {/* Active Status */}
-      <Checkbox
-        id="is_active"
-        name="is_active"
-        label="Categoría activa"
-        checked={formData.is_active ?? true}
-        onChange={(checked) => setFormData((prev) => ({ ...prev, is_active: checked }))}
-        disabled={isLoading}
-      />
-    </form>
-  );
-
-  // Footer buttons
-  const footerContent = (
-    <div className="flex justify-end space-x-3">
-      <Button
-        type="button"
-        variant="outline"
-        onClick={handleClose}
-        disabled={isLoading}
-      >
-        Cancelar
-      </Button>
-      <Button
-        type="button"
-        variant="primary"
-        disabled={isLoading}
-        loading={isLoading}
-        onClick={() => handleSubmit()}
-      >
-        Actualizar Categoría
-      </Button>
-    </div>
-  );
+  if (!category) return null;
 
   return (
-    <Modal
+    <FormModal
       isOpen={isOpen}
-      onClose={handleClose}
+      onClose={onClose}
+      onSuccess={handleSuccess}
       title={`Editar Categoría: ${category.name}`}
+      submitButtonText="Actualizar Categoría"
+      initialData={getInitialData()}
+      validator={categoryValidator}
+      submitHandler={handleSubmit}
       size="md"
-      footer={footerContent}
+      resetOnSuccess={false}
+      closeOnSuccess={true}
+      key={category.id} // Reset form when category changes
     >
-      {formContent}
-    </Modal>
+      {({ formData, errors, isLoading, handleInputChange, handleFieldChange }) => (
+        <>
+          {/* Name Field */}
+          <div>
+            <Input
+              label="Nombre *"
+              type="text"
+              id="name"
+              name="name"
+              value={formData.name}
+              onChange={handleInputChange}
+              placeholder="Ej. Reuniones"
+              disabled={isLoading}
+              error={errors.name}
+              fullWidth
+            />
+          </div>
+
+          {/* Description Field */}
+          <div>
+            <Textarea
+              label="Descripción"
+              id="description"
+              name="description"
+              value={formData.description}
+              onChange={handleInputChange}
+              rows={3}
+              placeholder="Describe el propósito de esta categoría..."
+              disabled={isLoading}
+              error={errors.description}
+              fullWidth
+            />
+          </div>
+
+          {/* Color Field */}
+          <div>
+            <ColorInput
+              label="Color"
+              value={formData.color || '#3B82F6'}
+              onChange={(color) => handleFieldChange('color', color)}
+              predefinedColors={predefinedColors}
+              disabled={isLoading}
+              error={errors.color}
+            />
+          </div>
+
+          {/* Active Status */}
+          <div>
+            <Checkbox
+              id="is_active"
+              name="is_active"
+              label="Categoría activa"
+              checked={formData.is_active ?? true}
+              onChange={(checked) => handleFieldChange('is_active', checked)}
+              disabled={isLoading}
+            />
+          </div>
+        </>
+      )}
+    </FormModal>
   );
 };
 
