@@ -7,7 +7,7 @@
 
 import { DashboardEvent, DashboardEventsResponse } from '@/services/dashboardService';
 import { EventCard } from './EventCard';
-import { EventPagination } from './EventPagination';
+import { Pagination } from '@/components/ui';
 
 interface EventsListProps {
   events: DashboardEventsResponse | null;
@@ -140,11 +140,10 @@ export const EventsList = ({
 
       {/* Pagination */}
       {events.pagination.total > events.pagination.per_page && (
-        <EventPagination
+        <Pagination
           currentPage={events.pagination.current_page}
           totalPages={events.pagination.last_page}
           totalItems={events.pagination.total}
-          itemsPerPage={events.pagination.per_page}
           onPageChange={onPageChange}
         />
       )}

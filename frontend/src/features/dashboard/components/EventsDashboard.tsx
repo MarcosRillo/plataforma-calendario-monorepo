@@ -8,10 +8,11 @@
 import { useState } from 'react';
 import { useDashboardData } from '@/hooks/useDashboardData';
 import { useEventsFilters } from '@/hooks/useEventsFilters';
+import { useEventDetail } from '@/hooks/useEventDetail';
 import { EventsFilterTabs } from './EventsFilterTabs';
 import { EventsSearchBar } from './EventsSearchBar';
 import { EventsList } from './EventsList';
-import { EventDetailModal } from './EventDetailModal';
+import { EventDetailModal } from '@/components/ui';
 
 export type DashboardTab = 'requires-action' | 'pending' | 'published' | 'historic';
 
@@ -42,6 +43,11 @@ export const EventsDashboard = () => {
   // Modal state management
   const [selectedEventId, setSelectedEventId] = useState<number | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // Load event details for modal
+  const { event: selectedEvent, isLoading: isLoadingEvent } = useEventDetail(selectedEventId, {
+    enabled: isModalOpen && !!selectedEventId
+  });
 
   const handleSearchClear = () => {
     handleSearchChange('');
@@ -132,9 +138,10 @@ export const EventsDashboard = () => {
 
       {/* Event Detail Modal */}
       <EventDetailModal
-        eventId={selectedEventId}
+        event={isLoadingEvent ? null : selectedEvent}
         isOpen={isModalOpen}
         onClose={handleModalClose}
+        context="dashboard"
         onActionComplete={handleActionComplete}
       />
     </div>

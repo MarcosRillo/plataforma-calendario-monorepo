@@ -13,9 +13,9 @@ import {
   ApprovalModal,
   EventFiltersBar,
   DashboardModeView,
-  EventDetailModal,
 } from '@/features/events/components';
-import { Pagination, Button } from '@/components/ui';
+import { EventDetailModal } from '@/components/ui';
+import { Pagination, Button, ConfirmDialog, PromptDialog } from '@/components/ui';
 
 type ViewMode = 'table' | 'dashboard';
 
@@ -24,6 +24,32 @@ export default function EventsPage() {
   const [viewMode, setViewMode] = useState<ViewMode>('dashboard');
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+
+  // Dialog states for replacing native dialogs
+  const [confirmDialog, setConfirmDialog] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    variant?: 'danger' | 'warning' | 'info' | 'success';
+    onConfirm: () => void;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+  });
+
+  const [promptDialog, setPromptDialog] = useState<{
+    isOpen: boolean;
+    title: string;
+    message?: string;
+    defaultValue?: string;
+    onConfirm: (value: string) => void;
+  }>({
+    isOpen: false,
+    title: '',
+    onConfirm: () => {},
+  });
 
   // Double-level approval workflow hook
   const {
@@ -135,20 +161,35 @@ export default function EventsPage() {
   };
 
   const handleRequestPublicApproval = async (event: Event) => {
-    const comment = prompt('Comentario opcional para la solicitud de aprobación pública:') || '';
-    const updatedEvent = await workflowRequestPublicApproval(event.id, comment || 'Solicitud de aprobación para calendario público');
-    if (updatedEvent) {
-      refreshData();
-    }
+    setPromptDialog({
+      isOpen: true,
+      title: 'Solicitud de Aprobación Pública',
+      message: 'Ingresa un comentario opcional para la solicitud de aprobación:',
+      defaultValue: '',
+      onConfirm: async (comment: string) => {
+        setPromptDialog(prev => ({ ...prev, isOpen: false }));
+        const updatedEvent = await workflowRequestPublicApproval(event.id, comment || 'Solicitud de aprobación para calendario público');
+        if (updatedEvent) {
+          refreshData();
+        }
+      },
+    });
   };
 
   const handlePublishEvent = async (event: Event) => {
-    if (confirm('¿Estás seguro de que quieres publicar este evento en el calendario público?')) {
-      const updatedEvent = await workflowPublishEvent(event.id);
-      if (updatedEvent) {
-        refreshData();
-      }
-    }
+    setConfirmDialog({
+      isOpen: true,
+      title: 'Confirmar Publicación',
+      message: '¿Estás seguro de que quieres publicar este evento en el calendario público?',
+      variant: 'success',
+      onConfirm: async () => {
+        setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+        const updatedEvent = await workflowPublishEvent(event.id);
+        if (updatedEvent) {
+          refreshData();
+        }
+      },
+    });
   };
 
   // Legacy handler for backward compatibility
@@ -157,25 +198,47 @@ export default function EventsPage() {
   };
 
   const handleRequestChangesEvent = async (event: Event) => {
-    const feedback = prompt('Ingresa los cambios solicitados:');
-    if (!feedback) return;
+    setPromptDialog({
+      isOpen: true,
+      title: 'Solicitar Cambios',
+      message: 'Ingresa los cambios solicitados:',
+      onConfirm: async (feedback: string) => {
+        setPromptDialog(prev => ({ ...prev, isOpen: false }));
+        if (!feedback.trim()) return;
 
-    const updatedEvent = await workflowRequestChanges(event.id, feedback);
-    if (updatedEvent) {
-      refreshData();
-    }
+        const updatedEvent = await workflowRequestChanges(event.id, feedback);
+        if (updatedEvent) {
+          refreshData();
+        }
+      },
+    });
   };
 
   const handleRejectEvent = async (event: Event) => {
-    const reason = prompt('Ingresa el motivo del rechazo:');
-    if (!reason) return;
+    setPromptDialog({
+      isOpen: true,
+      title: 'Rechazar Evento',
+      message: 'Ingresa el motivo del rechazo:',
+      onConfirm: (reason: string) => {
+        setPromptDialog(prev => ({ ...prev, isOpen: false }));
+        if (!reason.trim()) return;
 
-    if (confirm('¿Estás seguro de que quieres rechazar este evento?')) {
-      const updatedEvent = await workflowRejectEvent(event.id, reason);
-      if (updatedEvent) {
-        refreshData();
-      }
-    }
+        // Show confirmation after getting the reason
+        setConfirmDialog({
+          isOpen: true,
+          title: 'Confirmar Rechazo',
+          message: '¿Estás seguro de que quieres rechazar este evento?',
+          variant: 'danger',
+          onConfirm: async () => {
+            setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+            const updatedEvent = await workflowRejectEvent(event.id, reason);
+            if (updatedEvent) {
+              refreshData();
+            }
+          },
+        });
+      },
+    });
   };
 
   const handleToggleFeatured = async (event: Event) => {
@@ -433,8 +496,11 @@ export default function EventsPage() {
         <ApprovalModal
           isOpen={isApprovalModalOpen}
           event={currentEvent}
-          isLoading={isLoading}
           onClose={closeAllModals}
+          onSuccess={() => {
+            closeAllModals();
+            refreshData();
+          }}
           onApproveInternal={approveInternal}
           onRequestPublic={requestPublic}
           onApprovePublic={approvePublic}
@@ -473,6 +539,28 @@ export default function EventsPage() {
             await handleApproveEvent(event);
             closeDetailModal();
           }}
+        />
+
+        {/* Dialog Components */}
+        <ConfirmDialog
+          isOpen={confirmDialog.isOpen}
+          title={confirmDialog.title}
+          message={confirmDialog.message}
+          variant={confirmDialog.variant}
+          loading={approvalLoading}
+          onConfirm={confirmDialog.onConfirm}
+          onCancel={() => setConfirmDialog(prev => ({ ...prev, isOpen: false }))}
+        />
+
+        <PromptDialog
+          isOpen={promptDialog.isOpen}
+          title={promptDialog.title}
+          message={promptDialog.message}
+          defaultValue={promptDialog.defaultValue}
+          required={true}
+          loading={approvalLoading}
+          onConfirm={promptDialog.onConfirm}
+          onCancel={() => setPromptDialog(prev => ({ ...prev, isOpen: false }))}
         />
       </div>
     </div>
