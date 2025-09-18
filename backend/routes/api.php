@@ -8,6 +8,10 @@ use App\Http\Controllers\Api\V1\EventApprovalController;
 use App\Http\Controllers\Api\V1\EventController;
 use App\Http\Controllers\Api\V1\LocationController;
 use App\Http\Controllers\Api\V1\PublicEventController;
+
+// Feature Controllers - SIMPLE
+use App\Features\Events\Controllers\EventController as FeatureEventController;
+use App\Features\Approval\Controllers\ApprovalController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -30,24 +34,28 @@ Route::prefix('v1')->group(function () {
 
     // Protected routes
     Route::middleware('auth:sanctum')->group(function () {
-        // Events - specific routes first, then resource routes
-        Route::get('events/statistics', [EventController::class, 'statistics']);
-        Route::patch('events/{id}/toggle-featured', [EventController::class, 'toggleFeatured']);
+        // Events Feature Routes - SIMPLE
+        Route::get('events/statistics', [FeatureEventController::class, 'statistics']);
+        Route::patch('events/{id}/toggle-featured', [FeatureEventController::class, 'toggleFeatured']);
+        Route::post('events/{id}/duplicate', [FeatureEventController::class, 'duplicate']);
 
-        // Event Approval Workflow Routes
-        Route::patch('events/{id}/approve', [EventController::class, 'approve']);
-        Route::patch('events/{id}/request-public', [EventController::class, 'requestPublicApproval']);
-        Route::patch('events/{id}/publish', [EventController::class, 'publish']);
-        Route::patch('events/{id}/request-changes', [EventController::class, 'requestChanges']);
-        Route::patch('events/{id}/reject', [EventController::class, 'reject']);
+        // Approval Feature Routes - SIMPLE
+        Route::patch('events/{id}/approve', [ApprovalController::class, 'approve']);
+        Route::patch('events/{id}/request-public', [ApprovalController::class, 'requestPublicApproval']);
+        Route::patch('events/{id}/publish', [ApprovalController::class, 'publish']);
+        Route::patch('events/{id}/request-changes', [ApprovalController::class, 'requestChanges']);
+        Route::patch('events/{id}/reject', [ApprovalController::class, 'reject']);
 
-        // Legacy approval routes (keep for backward compatibility)
+        // Legacy approval statistics route (keep for dashboard compatibility)
         Route::get('events/approval/statistics', [EventApprovalController::class, 'getApprovalStatistics']);
-        Route::post('events/{event}/approve', [EventApprovalController::class, 'approve']);
-        Route::post('events/{event}/reject', [EventApprovalController::class, 'reject']);
-        Route::post('events/{event}/request-changes', [EventApprovalController::class, 'requestChanges']);
 
-        Route::apiResource('events', EventController::class);
+        // Event CRUD routes using Feature Controller - SIMPLE
+        Route::get('events', [FeatureEventController::class, 'index']);
+        Route::post('events', [FeatureEventController::class, 'store']);
+        Route::get('events/{id}', [FeatureEventController::class, 'show']);
+        Route::put('events/{id}', [FeatureEventController::class, 'update']);
+        Route::patch('events/{id}', [FeatureEventController::class, 'update']);
+        Route::delete('events/{id}', [FeatureEventController::class, 'destroy']);
 
         // Categories - specific routes first, then resource routes
         Route::get('categories/active', [CategoryController::class, 'active']);
@@ -89,6 +97,6 @@ Route::prefix('v1')->group(function () {
     });
 
     // Legacy public routes (keep for backward compatibility)
-    Route::get('events/public', [EventController::class, 'publicIndex']);
+    Route::get('events/public', [PublicEventController::class, 'index']);
     Route::get('categories/public', [CategoryController::class, 'publicIndex']);
 });
