@@ -33,7 +33,7 @@ interface ToastContextType {
 const ToastContext = createContext<ToastContextType | undefined>(undefined);
 
 // Individual Toast Component
-const Toast: React.FC<ToastProps> = ({ id, message, type, duration = 5000, onClose }) => {
+const Toast: React.FC<ToastProps> = ({ message, type, duration = 5000, onClose }) => {
   const [isVisible, setIsVisible] = useState(true);
 
   useEffect(() => {

@@ -41,22 +41,29 @@ export interface PublicEventFilters extends Omit<EventFilters, 'status'> {
 /**
  * Public event service operations
  */
-export const eventPublicService: Omit<PublicEventService, 'export' | 'getEvents' | 'getEvent'> & {
-  getEvents: (filters?: Record<string, unknown>) => Promise<EventPagination>;
-  getEvent?: (id: number) => Promise<Event>;
-} = {
+export const eventPublicService: Omit<PublicEventService, 'export'> = {
   /**
    * Get paginated list of events (alias for public events)
    */
   async getEvents(filters: Record<string, unknown> = {}): Promise<EventPagination> {
-    return this.getPublicEvents(filters);
+    const params = new URLSearchParams();
+
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== '') {
+        params.append(key, String(value));
+      }
+    });
+
+    const response = await apiClient.get(`/v1/public/events?${params.toString()}`);
+    return response.data;
   },
 
   /**
    * Get single event (alias for public event)
    */
   async getEvent(id: number): Promise<Event> {
-    return this.getPublicEvent(id);
+    const response = await apiClient.get(`/v1/public/events/${id}`);
+    return response.data.data;
   },
 
   /**
@@ -123,126 +130,7 @@ export const eventPublicService: Omit<PublicEventService, 'export' | 'getEvents'
     return response.data.data;
   },
 
-  /**
-   * Get events happening today
-   * Uses date range filtering on public events endpoint
-   */
-  async getTodaysEvents(): Promise<Event[]> {
-    const today = new Date().toISOString().split('T')[0];
-    return this.getEventsByDateRange(today, today);
-  },
-
-  /**
-   * Get events happening this week
-   * Uses date range filtering on public events endpoint
-   */
-  async getThisWeeksEvents(): Promise<Event[]> {
-    const today = new Date();
-    const startOfWeek = new Date(today.setDate(today.getDate() - today.getDay()));
-    const endOfWeek = new Date(today.setDate(today.getDate() - today.getDay() + 6));
-    
-    const startDate = startOfWeek.toISOString().split('T')[0];
-    const endDate = endOfWeek.toISOString().split('T')[0];
-    
-    return this.getEventsByDateRange(startDate, endDate);
-  },
-
-  /**
-   * Get events happening this month
-   * Uses calendar month endpoint
-   */
-  async getThisMonthsEvents(): Promise<Event[]> {
-    const today = new Date();
-    const year = today.getFullYear();
-    const month = today.getMonth() + 1;
-    
-    const calendarData = await this.getCalendarMonth(year, month);
-    return calendarData.events;
-  },
-
-  /**
-   * Get events by category
-   */
-  async getEventsByCategory(categoryId: number, filters: PublicEventFilters = {}): Promise<EventPagination> {
-    const params = new URLSearchParams();
-    
-    Object.entries(filters).forEach(([key, value]) => {
-      if (value !== undefined && value !== null && value !== '') {
-        params.append(key, String(value));
-      }
-    });
-
-    const response = await apiClient.get(`/v1/public/events/category/${categoryId}?${params.toString()}`);
-    return response.data;
-  },
-
-  /**
-   * Get events by location
-   * Note: No public location-based endpoint available - method removed
-   */
-
-  /**
-   * Get events near a location
-   * Note: No public near-location endpoint available - method removed
-   */
-
-  /**
-   * Get events by date range
-   */
-  async getEventsByDateRange(startDate: string, endDate: string): Promise<Event[]> {
-    const response = await apiClient.get(`/v1/public/events/date-range?start=${startDate}&end=${endDate}`);
-    return response.data.data;
-  },
-
-  /**
-   * Get calendar view data for a specific month
-   * Uses new public calendar endpoint
-   */
-  async getCalendarMonth(year: number, month: number): Promise<{
-    events: Event[];
-    calendar: {
-      date: string;
-      event_count: number;
-      has_featured: boolean;
-    }[];
-  }> {
-    const response = await apiClient.get(`/v1/public/events/calendar/${year}/${month}`);
-    return {
-      events: response.data.events,
-      calendar: response.data.calendar
-    };
-  },
-
-  /**
-   * Increment event view count
-   * Note: No public view tracking endpoint available - method removed
-   */
-
-  /**
-   * Get related events based on category/location/tags
-   * Note: No public related events endpoint available - method removed
-   */
-
-  /**
-   * Get public categories with event counts
-   * Uses new public categories endpoint
-   */
-  async getPublicCategories(): Promise<{
-    id: number;
-    name: string;
-    slug: string;
-    color: string;
-    description?: string;
-    event_count: number;
-  }[]> {
-    const response = await apiClient.get('/v1/public/categories');
-    return response.data.data;
-  },
-
-  /**
-   * Get public locations with event counts
-   * Note: No public locations endpoint available - method removed
-   */
+  // Only interface-defined methods remain
 };
 
 /**

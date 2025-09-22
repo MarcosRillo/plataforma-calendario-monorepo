@@ -173,7 +173,6 @@ export const ApprovalModal = ({
               value={formData.action}
               onChange={(value) => handleFieldChange('action', value)}
               options={availableActions}
-              disabled={isLoading}
               error={errors.action}
             />
           </div>

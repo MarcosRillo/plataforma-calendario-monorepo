@@ -9,6 +9,7 @@
 import { useState, useCallback } from 'react';
 import { Event } from '@/types/event.types';
 import { approvalService, approvalValidation } from '../services/approvalService';
+import { ApiError } from '@/lib/api';
 
 interface ApprovalError {
   message: string;
@@ -57,17 +58,22 @@ export const useApprovalManager = (): UseApprovalManagerReturn => {
   /**
    * Generic error handler for approval operations
    */
-  const handleError = useCallback((error: any): ApprovalError => {
+  const handleError = useCallback((error: ApiError | Error | unknown): ApprovalError => {
     console.error('Approval operation error:', error);
 
-    if (error.response?.data?.message) {
-      return {
-        message: error.response.data.message,
-        details: error.response?.data?.errors ? JSON.stringify(error.response.data.errors) : undefined
-      };
+    // Handle API errors with proper type guards
+    if (error && typeof error === 'object' && 'message' in error) {
+      const apiError = error as unknown as ApiError;
+      if (apiError.message) {
+        return {
+          message: apiError.message,
+          details: apiError.errors ? JSON.stringify(apiError.errors) : undefined
+        };
+      }
     }
 
-    if (error.message) {
+    // Handle standard Error objects
+    if (error instanceof Error) {
       return { message: error.message };
     }
 
@@ -77,7 +83,7 @@ export const useApprovalManager = (): UseApprovalManagerReturn => {
   /**
    * Generic approval operation wrapper
    */
-  const executeApprovalOperation = useCallback(async <T extends any[]>(
+  const executeApprovalOperation = useCallback(async <T extends unknown[]>(
     operation: (...args: T) => Promise<Event>,
     ...args: T
   ): Promise<Event | null> => {

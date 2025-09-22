@@ -4,11 +4,10 @@
  */
 
 import { useState, useCallback } from 'react';
-import { 
-  eventApprovalService, 
-  ApprovalAction, 
+import {
+  eventApprovalService,
   ApprovalRequest,
-  ApprovalResponse 
+  ApprovalResponse
 } from '@/services/eventApprovalService';
 
 interface UseEventActionsReturn {
@@ -32,8 +31,7 @@ export const useEventActions = (): UseEventActionsReturn => {
     // Validate the request before making API call
     const validationErrors = eventApprovalService.validateApprovalRequest(
       request.action,
-      request.reason,
-      request.comments
+      request.reason
     );
 
     if (validationErrors.length > 0) {

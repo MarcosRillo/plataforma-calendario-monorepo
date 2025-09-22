@@ -42,7 +42,7 @@ export const EventsList = ({
   // Helper function to identify if event belongs to Ente de Turismo
   const ENTE_TURISMO_ORG_ID = 1;
   const isEnteEvent = (event: Event): boolean => {
-    return event.organization_id === ENTE_TURISMO_ORG_ID;
+    return event.organizer?.id === ENTE_TURISMO_ORG_ID;
   };
   if (isLoading) {
     return (

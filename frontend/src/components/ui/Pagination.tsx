@@ -64,7 +64,7 @@ const Pagination: React.FC<PaginationProps> = (props) => {
   const totalItems = isAdvancedMode ? props.total : props.totalItems;
   const perPage = isAdvancedMode ? props.perPage : 10;
   const onPerPageChange = isAdvancedMode ? props.onPerPageChange : undefined;
-  const showPerPageSelector = isAdvancedMode && props.showPerPageSelector !== false;
+  const showPerPageSelector = isAdvancedMode;
 
   // Calculate items info
   const itemsFrom = isAdvancedMode

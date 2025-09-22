@@ -1,12 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Calendar as CalendarIcon, Share2, Download } from 'lucide-react';
 import PublicCalendar from './components/PublicCalendar';
 import PublicEventFilters, { PublicEventFiltersState } from './components/PublicEventFilters';
 import { EventDetailModal } from '@/components/ui';
 import { Event } from '@/types/event.types';
-import { eventPublicService, eventPublicExportService } from '@/features/events/services/eventPublicService';
+import { eventPublicExportService } from '@/features/events/services/eventPublicService';
 import { useToast } from '@/components/ui';
 
 export default function CalendarPageClient() {
@@ -19,8 +19,9 @@ export default function CalendarPageClient() {
     month: '',
     year: ''
   });
-  const [events, setEvents] = useState<Event[]>([]);
-  const [loading, setLoading] = useState(false);
+  // Event state managed by PublicCalendar component
+  // const [events, setEvents] = useState<Event[]>([]);
+  // const [loading, setLoading] = useState(false);
 
   const handleEventSelect = (event: Event) => {
     setSelectedEvent(event);
@@ -39,7 +40,7 @@ export default function CalendarPageClient() {
   const handleExportIcal = async () => {
     try {
       const filterParams = Object.fromEntries(
-        Object.entries(filters).filter(([_, value]) => value !== undefined && value !== '')
+        Object.entries(filters).filter(([, value]) => value !== undefined && value !== '')
       );
       
       const blob = await eventPublicExportService.downloadICalFile(filterParams);

@@ -142,6 +142,7 @@ export const CreateEventForm = ({
       // Required ID fields using real database values
       status_id: getStatusId('draft'), // ID 1 = 'draft'
       type_id: getTypeId(formData.type), // ID 1 = 'sede_unica', ID 2 = 'multi_sede'
+      type: formData.type, // Also include the type itself
       organization_id: 1, // Default to Ente de Turismo (assuming ID=1)
       entity_id: 1, // Default to Ente de Turismo for supervision
 

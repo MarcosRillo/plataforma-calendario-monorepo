@@ -5,7 +5,7 @@
 
 'use client';
 
-import { DashboardEvent, DashboardEventsResponse } from '@/services/dashboardService';
+import { DashboardEventsResponse } from '@/services/dashboardService';
 import { EventCard } from './EventCard';
 import { Pagination } from '@/components/ui';
 

@@ -8,6 +8,16 @@
 
 import { useState, useEffect, FormEvent, ReactNode } from 'react';
 import { Modal, Button } from '@/components/ui';
+import { CreateCategoryData, UpdateCategoryData } from '@/types/category.types';
+import { EventFormData } from '@/lib/api';
+
+// Form data types supported by FormModal - specific domain types only
+interface ApprovalFormData {
+  action: string;
+  comment: string;
+}
+
+type FormDataType = CreateCategoryData | UpdateCategoryData | EventFormData | ApprovalFormData;
 
 // API error structure
 interface ApiError {
@@ -33,7 +43,7 @@ export type FormSubmitHandler<T> = (
 ) => Promise<void>;
 
 // Base props for FormModal
-export interface FormModalProps<T extends Record<string, any>> {
+export interface FormModalProps<T extends FormDataType> {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
@@ -95,7 +105,7 @@ const ErrorAlert = ({ message }: { message: string }) => (
   </div>
 );
 
-export function FormModal<T extends Record<string, any>>({
+export function FormModal<T extends FormDataType>({
   isOpen,
   onClose,
   onSuccess,

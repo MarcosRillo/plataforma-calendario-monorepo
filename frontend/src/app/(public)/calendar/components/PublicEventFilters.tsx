@@ -1,9 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Search, Filter, Calendar as CalendarIcon, MapPin } from 'lucide-react';
+import { Search, Filter, Calendar as CalendarIcon } from 'lucide-react';
 import { Category } from '@/types/category.types';
-import { eventPublicService } from '@/features/events/services/eventPublicService';
+import { apiClient } from '@/lib/api';
 
 export interface PublicEventFiltersState {
   search: string;
@@ -27,7 +27,8 @@ export default function PublicEventFilters({
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const categoriesData = await eventPublicService.getPublicCategories();
+        const response = await apiClient.get<{categories: Category[]}>('/v1/public/categories');
+        const categoriesData = response.categories;
         setCategories(categoriesData);
       } catch (error) {
         console.error('Error fetching categories:', error);
@@ -187,7 +188,7 @@ export default function PublicEventFilters({
         <div className="mt-4 flex flex-wrap gap-2">
           {filters.search && (
             <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-              Búsqueda: "{filters.search}"
+              Búsqueda: &quot;{filters.search}&quot;
             </span>
           )}
           {filters.category_id && (

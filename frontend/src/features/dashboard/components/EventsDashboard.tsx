@@ -138,7 +138,8 @@ export const EventsDashboard = () => {
 
       {/* Event Detail Modal */}
       <EventDetailModal
-        event={isLoadingEvent ? null : selectedEvent}
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        event={isLoadingEvent ? null : (selectedEvent as any)}
         isOpen={isModalOpen}
         onClose={handleModalClose}
         context="dashboard"

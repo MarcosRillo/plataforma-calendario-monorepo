@@ -6,13 +6,19 @@
 
 'use client';
 
-import { ReactNode, Fragment } from 'react';
-import { LoadingSpinner, Pagination, Button } from '@/components/ui';
+import { ReactNode } from 'react';
+import { Pagination, Button } from '@/components/ui';
 import { PermissionGate } from '@/components/auth/PermissionGate';
 import { Permission } from '@/types/auth.types';
+import { Event } from '@/types/event.types';
+import { User } from '@/types/user.types';
+import { Category } from '@/types/category.types';
+
+// Supported table data types based on business domain
+type TableDataType = Event | User | Category;
 
 // Base column configuration
-export interface TableColumn<T = any> {
+export interface TableColumn<T extends TableDataType = TableDataType> {
   key: string;
   label: string;
   className?: string;
@@ -22,7 +28,7 @@ export interface TableColumn<T = any> {
 }
 
 // Base action configuration
-export interface TableAction<T = any> {
+export interface TableAction<T extends TableDataType = TableDataType> {
   key: string;
   label: string;
   icon?: ReactNode;
@@ -54,7 +60,7 @@ export interface TablePaginationProps {
 }
 
 // Main table props
-export interface TableProps<T = any> {
+export interface TableProps<T extends TableDataType = TableDataType> {
   columns: TableColumn<T>[];
   data: T[];
   loading?: boolean;
@@ -83,7 +89,7 @@ const DefaultEmptyIcon = () => (
 );
 
 // Loading skeleton component
-const TableSkeleton = ({ columns }: { columns: TableColumn[] }) => (
+const TableSkeleton = ({ columns }: { columns: TableColumn<TableDataType>[] }) => (
   <div className="animate-pulse">
     <div className="bg-gray-50 px-6 py-3">
       <div className="flex space-x-4">
@@ -124,7 +130,7 @@ const EmptyState = ({
   </div>
 );
 
-export const Table = <T,>({
+export const Table = <T extends TableDataType>({
   columns,
   data,
   loading = false,
@@ -194,7 +200,7 @@ export const Table = <T,>({
   if (loading) {
     return (
       <div className={`bg-white rounded-lg shadow overflow-hidden ${className}`}>
-        <TableSkeleton columns={finalColumns} />
+        <TableSkeleton columns={finalColumns as TableColumn<TableDataType>[]} />
       </div>
     );
   }
@@ -271,7 +277,7 @@ export const Table = <T,>({
                                 <Button
                                   key={action.key}
                                   variant={action.variant || 'ghost'}
-                                  size={action.size || 'sm'}
+                                  size={(action.size === 'xs' ? 'sm' : action.size) || 'sm'}
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     action.onClick(item, index);
@@ -301,7 +307,7 @@ export const Table = <T,>({
                       ) : (
                         // Fallback - try to access the property by key
                         <span className="text-sm text-gray-900">
-                          {String((item as any)[column.key] || '—')}
+                          {String(item[column.key as keyof T] || '—')}
                         </span>
                       )}
                     </td>
@@ -317,21 +323,8 @@ export const Table = <T,>({
       {pagination && (
         <div className="border-t border-gray-200">
           <Pagination
-            currentPage={pagination.currentPage}
-            totalPages={pagination.totalPages}
-            totalItems={pagination.totalItems}
-            itemsFrom={pagination.itemsFrom}
-            itemsTo={pagination.itemsTo}
-            hasNextPage={pagination.hasNextPage}
-            hasPrevPage={pagination.hasPrevPage}
-            onPageChange={pagination.onPageChange}
-            showInfo={pagination.showInfo}
-            // Advanced pagination support
-            lastPage={pagination.lastPage}
-            total={pagination.total}
-            perPage={pagination.perPage}
-            onPerPageChange={pagination.onPerPageChange}
-            showPerPageSelector={pagination.showPerPageSelector}
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            {...(pagination as any)}
           />
         </div>
       )}

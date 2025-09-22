@@ -1,21 +1,24 @@
 import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { eventPublicService } from '@/features/events/services/eventPublicService';
+import { apiClient } from '@/lib/api';
+import { Event } from '@/types/event.types';
 import EventDetailPage from './EventDetailPage';
 
 interface EventPageProps {
-  params: {
+  params: Promise<{
     slug: string;
-  };
+  }>;
 }
 
 export async function generateMetadata({ params }: EventPageProps): Promise<Metadata> {
   try {
     // Try to get the event by ID or slug
-    const eventId = parseInt(params.slug) || params.slug;
-    const event = await eventPublicService.getPublicEvent(eventId);
+    const { slug } = await params;
+    const eventId = parseInt(slug) || slug;
+    const response = await apiClient.get<{data: Event}>(`/v1/public/events/${eventId}`);
+    const event = response.data;
 
-    const eventUrl = `/calendar/${params.slug}`;
+    const eventUrl = `/calendar/${slug}`;
     const eventDate = new Date(event.start_date).toLocaleDateString('es-AR', {
       year: 'numeric',
       month: 'long',
@@ -58,7 +61,7 @@ export async function generateMetadata({ params }: EventPageProps): Promise<Meta
         'event:location': event.location?.name || event.location_text || '',
       }
     };
-  } catch (error) {
+  } catch {
     return {
       title: 'Evento no encontrado - Tucumán Turismo',
       description: 'El evento solicitado no fue encontrado o no está disponible.',
@@ -69,8 +72,10 @@ export async function generateMetadata({ params }: EventPageProps): Promise<Meta
 export default async function EventPage({ params }: EventPageProps) {
   try {
     // Try to get the event by ID or slug
-    const eventId = parseInt(params.slug) || params.slug;
-    const event = await eventPublicService.getPublicEvent(eventId);
+    const { slug } = await params;
+    const eventId = parseInt(slug) || slug;
+    const response = await apiClient.get<{data: Event}>(`/v1/public/events/${eventId}`);
+    const event = response.data;
 
     return <EventDetailPage event={event} />;
   } catch (error) {

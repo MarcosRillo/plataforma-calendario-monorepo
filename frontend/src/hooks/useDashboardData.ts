@@ -37,7 +37,7 @@ export const useDashboardData = (params: DashboardEventsParams = {}): UseDashboa
   const memoizedParams = useMemo(() => {
     console.log('🔄 useDashboardData useMemo - params changed, creating new memoizedParams:', params);
     return params;
-  }, [params.tab, params.page, params.search]);
+  }, [params]);
 
   const fetchSummary = async () => {
     console.log('📊 Dashboard API call starting - fetchSummary...');

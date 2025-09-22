@@ -3,7 +3,7 @@
  * All authentication business logic and side effects
  */
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { AxiosError } from 'axios';
 import apiClient, { setAuthToken, removeAuthToken, getAuthToken } from '../services/apiClient';
@@ -60,15 +60,15 @@ export const useAuthActions = (): AuthState & AuthActions => {
             // Validate token by making a test request
             try {
               await apiClient.get('/v1/auth/me');
-            } catch (error) {
+            } catch {
               // Token is invalid, clear auth state
               // handleLogout();  // DISABLED FOR DEBUGGING
             }
-          } catch (error) {
+          } catch {
             // handleLogout();  // DISABLED FOR DEBUGGING
           }
         }
-      } catch (error) {
+      } catch {
         // handleLogout();  // DISABLED FOR DEBUGGING
       } finally {
         setIsLoading(false);
@@ -167,7 +167,7 @@ export const useAuthActions = (): AuthState & AuthActions => {
 
       localStorage.setItem('user', JSON.stringify(userData));
       setUser(userData);
-    } catch (error) {
+    } catch {
       // If refresh fails, user might need to login again
       // handleLogout();         // DISABLED FOR DEBUGGING
       // router.push('/login');  // DISABLED FOR DEBUGGING

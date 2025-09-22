@@ -95,7 +95,7 @@ export const EventFiltersBar = ({
           <Select
             label="Estado"
             value={filters.status || ''}
-            onChange={(e) => handleFilterChange('status', (e.target.value || undefined) as EventFilters['status'])}
+            onChange={(value) => handleFilterChange('status', (value || undefined) as EventFilters['status'])}
             placeholder="Todos los estados"
             options={[
               { value: EVENT_STATUS.DRAFT, label: 'Borrador' },
@@ -116,7 +116,7 @@ export const EventFiltersBar = ({
           <Select
             label="Tipo"
             value={filters.type || ''}
-            onChange={(e) => handleFilterChange('type', (e.target.value || undefined) as EventFilters['type'])}
+            onChange={(value) => handleFilterChange('type', (value || undefined) as EventFilters['type'])}
             placeholder="Todos los tipos"
             options={[
               { value: EVENT_TYPE.SINGLE_LOCATION, label: 'Sede Única' },
@@ -135,7 +135,7 @@ export const EventFiltersBar = ({
             <Select
               label="Categoría"
               value={filters.category_id || ''}
-              onChange={(e) => handleFilterChange('category_id', e.target.value ? Number(e.target.value) : undefined)}
+              onChange={(value) => handleFilterChange('category_id', value ? Number(value) : undefined)}
               placeholder="Todas las categorías"
               options={[
                 { value: '', label: 'Todas las categorías' },

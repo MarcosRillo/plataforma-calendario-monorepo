@@ -7,13 +7,33 @@
 
 import { useState } from 'react';
 import { useEventManager } from '@/features/events/hooks/useEventManager';
-import { 
-  getEventServiceForContext, 
-  eventAdminService,
-  eventPublicService,
-  eventOrganizerService
+import {
+  getEventServiceForContext
 } from '@/features/events/services/event.service';
+import { eventPublicExportService } from '@/features/events/services/eventPublicService';
+import { apiClient } from '@/lib/api';
 import { usePermissions } from '@/hooks/usePermissions';
+import { Event } from '@/types/event.types';
+
+// Context types for event service examples
+type ServiceContext = 'admin' | 'public' | 'organizer';
+
+// Dashboard statistics interface for admin service
+interface AdminStats {
+  totalEvents: number;
+  publishedEvents: number;
+  pendingApproval: number;
+  draftEvents: number;
+}
+
+// Event template interface for examples
+interface EventTemplate {
+  id: string;
+  name: string;
+  description: string;
+  category: string;
+  defaultDuration: number;
+}
 
 // Example 1: Basic usage with auto-detection
 export const AutoDetectedEventManager = () => {
@@ -21,10 +41,11 @@ export const AutoDetectedEventManager = () => {
   const {
     events,
     isLoading,
-    createEvent,
-    updateEvent,
-    deleteEvent,
-    canManageEvents
+    // Example functions available but not used in demo
+    // createEvent,
+    // updateEvent,
+    // deleteEvent,
+    // canManageEvents
   } = useEventManager(); // Auto-detects context
 
   return (
@@ -37,11 +58,10 @@ export const AutoDetectedEventManager = () => {
       ) : (
         <div>
           <p>Found {events.length} events</p>
-          {canManageEvents && (
-            <button onClick={() => console.log('Can create events')}>
-              Create Event
-            </button>
-          )}
+          {/* canManageEvents check removed for demo */}
+          <button onClick={() => console.log('Example create events')}>
+            Create Event (Demo)
+          </button>
         </div>
       )}
     </div>
@@ -67,9 +87,9 @@ export const ExplicitContextEventManager = () => {
       
       <div className="mb-4">
         <label>Choose Context: </label>
-        <select 
-          value={context} 
-          onChange={(e) => setContext(e.target.value as any)}
+        <select
+          value={context}
+          onChange={(e) => setContext(e.target.value as ServiceContext)}
         >
           <option value="admin">Admin</option>
           <option value="public">Public</option>
@@ -88,7 +108,7 @@ export const ExplicitContextEventManager = () => {
 
 // Example 3: Direct service usage
 export const DirectServiceUsage = () => {
-  const [events, setEvents] = useState<any[]>([]);
+  const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(false);
   const { isAdmin, isOrganizer } = usePermissions();
 
@@ -108,11 +128,8 @@ export const DirectServiceUsage = () => {
   const loadPublicEvents = async () => {
     setLoading(true);
     try {
-      const result = await eventPublicService.getPublicEvents({ 
-        featured_only: true,
-        upcoming_only: true 
-      });
-      setEvents(result.data);
+      const result = await apiClient.get<{events: Event[]}>('/v1/public/events?featured_only=true&upcoming_only=true');
+      setEvents(result.events);
     } catch (error) {
       console.error('Error loading public events:', error);
     } finally {
@@ -123,10 +140,8 @@ export const DirectServiceUsage = () => {
   const loadOrganizerEvents = async () => {
     setLoading(true);
     try {
-      const result = await eventOrganizerService.getMyEvents({ 
-        draft_only: true 
-      });
-      setEvents(result.data);
+      const result = await apiClient.get<{events: Event[]}>('/v1/organizer/events?draft_only=true');
+      setEvents(result.events);
     } catch (error) {
       console.error('Error loading organizer events:', error);
     } finally {
@@ -183,13 +198,14 @@ export const DirectServiceUsage = () => {
 
 // Example 4: Service-specific features
 export const ServiceSpecificFeatures = () => {
-  const [stats, setStats] = useState<any>(null);
-  const [templates, setTemplates] = useState<any[]>([]);
+  const [stats, setStats] = useState<AdminStats | null>(null);
+  const [templates, setTemplates] = useState<EventTemplate[]>([]);
   const [exportUrl, setExportUrl] = useState<string>('');
 
   const loadAdminStats = async () => {
     try {
-      const detailedStats = await eventAdminService.getDetailedStatistics();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const detailedStats = await apiClient.get<any>('/v1/admin/events/statistics');
       setStats(detailedStats);
     } catch (error) {
       console.error('Error loading stats:', error);
@@ -198,7 +214,8 @@ export const ServiceSpecificFeatures = () => {
 
   const loadOrganizerTemplates = async () => {
     try {
-      const userTemplates = await eventOrganizerService.getMyTemplates();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const userTemplates = await apiClient.get<any>('/v1/organizer/templates');
       setTemplates(userTemplates);
     } catch (error) {
       console.error('Error loading templates:', error);
@@ -206,7 +223,7 @@ export const ServiceSpecificFeatures = () => {
   };
 
   const generateRSSFeed = () => {
-    const url = eventPublicService.export.getRSSFeedUrl({
+    const url = eventPublicExportService.getRSSFeedUrl({
       featured_only: true,
       upcoming_only: true
     });
@@ -214,7 +231,7 @@ export const ServiceSpecificFeatures = () => {
   };
 
   const generateICalFeed = () => {
-    const url = eventPublicService.export.getICalUrl({
+    const url = eventPublicExportService.getICalUrl({
       this_month: true
     });
     setExportUrl(url);
@@ -236,9 +253,8 @@ export const ServiceSpecificFeatures = () => {
           </button>
           {stats && (
             <div className="mt-2">
-              <p>Total Events: {stats.total_events}</p>
-              <p>Daily Stats: {stats.dailyStats?.length || 0} entries</p>
-              <p>Top Categories: {stats.topCategories?.length || 0}</p>
+              <p>Statistics loaded successfully</p>
+              <pre>{JSON.stringify(stats, null, 2)}</pre>
             </div>
           )}
         </div>
