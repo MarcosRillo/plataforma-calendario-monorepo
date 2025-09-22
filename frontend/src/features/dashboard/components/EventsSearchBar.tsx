@@ -27,9 +27,12 @@ export const EventsSearchBar = ({
 
   // Debounced onChange callback
   const debouncedOnChange = useCallback(
-    debounce((searchValue: string) => {
-      onChange(searchValue);
-    }, debounceMs),
+    (searchValue: string) => {
+      const debouncedFn = debounce((value: string) => {
+        onChange(value);
+      }, debounceMs);
+      debouncedFn(searchValue);
+    },
     [onChange, debounceMs]
   );
 
@@ -110,8 +113,8 @@ export const EventsSearchBar = ({
   );
 };
 
-// Utility: Debounce function
-function debounce<T extends (...args: any[]) => any>(
+// Utility: Debounce function for search input handling
+function debounce<T extends (query: string) => void>(
   func: T,
   wait: number
 ): (...args: Parameters<T>) => void {
@@ -119,6 +122,7 @@ function debounce<T extends (...args: any[]) => any>(
   
   return (...args: Parameters<T>) => {
     clearTimeout(timeout);
-    timeout = setTimeout(() => func(...args), wait);
+    // eslint-disable-next-line prefer-spread
+    timeout = setTimeout(() => func.apply(null, args), wait);
   };
 }

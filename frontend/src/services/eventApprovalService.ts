@@ -216,7 +216,7 @@ class EventApprovalService {
   /**
    * Validate approval request based on business rules
    */
-  validateApprovalRequest(action: ApprovalAction, reason?: string, comments?: string): string[] {
+  validateApprovalRequest(action: ApprovalAction, reason?: string): string[] {
     const errors: string[] = [];
 
     switch (action) {

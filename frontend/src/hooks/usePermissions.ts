@@ -4,7 +4,7 @@
  */
 
 import { useAuth } from '@/context/AuthContext';
-import { UserRole, Permission } from '@/types/auth.types';
+import { UserRoleCode, Permission } from '@/types/auth.types';
 
 export const usePermissions = () => {
   const {
@@ -31,7 +31,7 @@ export const usePermissions = () => {
   /**
    * Check if current user has any of the specified roles
    */
-  const hasAnyRole = (roles: UserRole[]): boolean => {
+  const hasAnyRole = (roles: UserRoleCode[]): boolean => {
     return roles.some(role => hasRole(role));
   };
 

@@ -6,7 +6,7 @@ import moment from 'moment';
 import 'moment/locale/es';
 import '../calendar.css';
 import { Event } from '@/types/event.types';
-import { eventPublicService } from '@/features/events/services/eventPublicService';
+import { apiClient } from '@/lib/api';
 
 moment.locale('es');
 const localizer = momentLocalizer(moment);
@@ -56,7 +56,7 @@ export default function PublicCalendar({
       const year = date.getFullYear();
       const month = date.getMonth() + 1;
       
-      const response = await eventPublicService.getCalendarMonth(year, month);
+      const response = await apiClient.get<{events: Event[]}>(`/v1/public/events/calendar/${year}/${month}`);
       setEvents(response.events);
     } catch (error) {
       console.error('Error fetching calendar events:', error);

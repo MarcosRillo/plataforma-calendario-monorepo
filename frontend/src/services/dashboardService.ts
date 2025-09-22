@@ -5,6 +5,26 @@
 
 import { apiClient } from '@/lib/api';
 
+// Event metadata specific to dashboard functionality
+interface EventMetadata {
+  source?: string;
+  tags?: string[];
+  custom_fields?: Record<string, string | number | boolean>;
+  external_id?: string;
+}
+
+// Approval history entry for event workflow tracking
+interface ApprovalHistoryEntry {
+  id: number;
+  action: string;
+  comment?: string;
+  user_id: number;
+  user_name: string;
+  timestamp: string;
+  previous_status?: string;
+  new_status?: string;
+}
+
 export interface DashboardSummary {
   requiere_accion: number;
   pendientes: number;
@@ -85,9 +105,9 @@ export interface EventDetail extends DashboardEvent {
   cta_link?: string;
   cta_text?: string;
   max_attendees?: number;
-  metadata?: any;
+  metadata?: EventMetadata;
   approval_comments?: string;
-  approval_history?: any[];
+  approval_history?: ApprovalHistoryEntry[];
   creator?: EventUser;
   approver?: EventUser;
   approved_at?: string;
@@ -125,12 +145,12 @@ class DashboardService {
       data: DashboardSummary;
       message: string;
     }>('/dashboard/events/summary');
-    
-    if (!response.data.success) {
-      throw new Error(response.data.message || 'Failed to fetch dashboard summary');
+
+    if (!response.success) {
+      throw new Error(response.message || 'Failed to fetch dashboard summary');
     }
-    
-    return response.data.data;
+
+    return response.data;
   }
 
   /**
@@ -150,13 +170,13 @@ class DashboardService {
       message: string;
     }>(`/dashboard/events?${searchParams.toString()}`);
     
-    if (!response.data.success) {
-      throw new Error(response.data.message || 'Failed to fetch events');
+    if (!response.success) {
+      throw new Error(response.message || 'Failed to fetch events');
     }
-    
+
     return {
-      data: response.data.data,
-      pagination: response.data.pagination,
+      data: response.data,
+      pagination: response.pagination,
     };
   }
 
@@ -170,11 +190,11 @@ class DashboardService {
       message: string;
     }>(`/events/${eventId}/detail`);
     
-    if (!response.data.success) {
-      throw new Error(response.data.message || 'Failed to fetch event detail');
+    if (!response.success) {
+      throw new Error(response.message || 'Failed to fetch event detail');
     }
-    
-    return response.data.data;
+
+    return response.data;
   }
 }
 

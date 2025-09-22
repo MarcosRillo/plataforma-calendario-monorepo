@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState, type ReactNode } from 'react';
-import { Event, EVENT_STATUS, EVENT_TYPE } from '@/types/event.types';
+import { Event, EVENT_STATUS, EVENT_TYPE, EventStatus, EventType } from '@/types/event.types';
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Button, LoadingSpinner, ConfirmDialog } from '@/components/ui';
@@ -50,11 +50,11 @@ interface EventTableProps {
 }
 
 // Helper functions to handle 3NF objects
-const getEventStatusCode = (status: any): string => {
+const getEventStatusCode = (status: EventStatus): string => {
   return typeof status === 'object' ? status.status_code : status;
 };
 
-const getEventTypeCode = (type: any): string => {
+const getEventTypeCode = (type: EventType): string => {
   return typeof type === 'object' ? type.type_code : type;
 };
 
@@ -357,7 +357,7 @@ export const EventTable = ({
       onToggleFeatured, onRequestApproval, onShareEvent, onExportToCalendar, onViewComments]);
 
   // Status labels with different styling per view mode
-  const getStatusLabel = (status: any, viewMode: EventTableViewMode) => {
+  const getStatusLabel = (status: EventStatus, viewMode: EventTableViewMode) => {
     const statusCode = getEventStatusCode(status);
     const baseLabel = statusLabels[statusCode as keyof typeof statusLabels];
     if (!baseLabel) return { label: statusCode, className: 'bg-gray-100 text-gray-800' };
@@ -505,7 +505,7 @@ export const EventTable = ({
                       return (
                         <td key={column.key} className="px-6 py-4 whitespace-nowrap">
                           <span className="text-sm text-gray-900">
-                            {typeLabels[getEventTypeCode(event.type)]}
+                            {typeLabels[getEventTypeCode(event.type) as keyof typeof typeLabels]}
                           </span>
                         </td>
                       );
@@ -542,13 +542,13 @@ export const EventTable = ({
 
                     case 'organizer':
                       const ENTE_TURISMO_ORG_ID = 1;
-                      const isEnteEvent = event.organization_id === ENTE_TURISMO_ORG_ID;
+                      const isEnteEvent = event.organizer?.id === ENTE_TURISMO_ORG_ID;
 
                       return (
                         <td key={column.key} className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center space-x-2">
                             <div className="text-sm text-gray-900">
-                              {event.organization?.name || 'Sin organización'}
+                              {event.organizer?.organization || event.organizer?.name || 'Sin organización'}
                             </div>
                             <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${
                               isEnteEvent
@@ -558,9 +558,9 @@ export const EventTable = ({
                               {isEnteEvent ? 'Interno' : 'Externo'}
                             </span>
                           </div>
-                          {event.organization?.description && (
+                          {event.organizer?.organization && (
                             <div className="text-sm text-gray-500 mt-1">
-                              {event.organization.description}
+                              Organizer details
                             </div>
                           )}
                         </td>

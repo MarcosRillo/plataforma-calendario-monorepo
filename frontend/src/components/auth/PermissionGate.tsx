@@ -7,7 +7,7 @@
 
 import { ReactNode } from 'react';
 import { usePermissions } from '@/hooks/usePermissions';
-import { UserRole, Permission } from '@/types/auth.types';
+import { UserRoleCode, Permission } from '@/types/auth.types';
 
 interface PermissionGateProps {
   children: ReactNode;
@@ -18,8 +18,8 @@ interface PermissionGateProps {
   requireAll?: boolean; // For permissions array, require all or just one
   
   // Role-based access
-  role?: UserRole;
-  roles?: UserRole[];
+  role?: UserRoleCode;
+  roles?: UserRoleCode[];
   
   // Resource-based access
   resource?: string;

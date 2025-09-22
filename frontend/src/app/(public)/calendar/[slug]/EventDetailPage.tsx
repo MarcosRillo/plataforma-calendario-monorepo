@@ -1,22 +1,23 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { 
   ArrowLeft,
   Calendar,
-  Clock,
+  // Clock,
   MapPin,
-  User,
+  // User,
   Phone,
   Mail,
   ExternalLink,
-  Share2,
-  Download
+  // Share2,
+  // Download
 } from 'lucide-react';
 import moment from 'moment';
 import { Event } from '@/types/event.types';
-import { eventPublicService, eventPublicExportService } from '@/features/events/services/eventPublicService';
+import { eventPublicExportService } from '@/features/events/services/eventPublicService';
 import ShareButtons from '../components/ShareButtons';
 
 interface EventDetailPageProps {
@@ -154,9 +155,11 @@ export default function EventDetailPage({ event }: EventDetailPageProps) {
           {/* Featured Image */}
           {event.featured_image && (
             <div className="mb-8">
-              <img
+              <Image
                 src={event.featured_image}
                 alt={event.title}
+                width={800}
+                height={320}
                 className="w-full h-64 md:h-80 object-cover rounded-lg shadow-lg"
               />
             </div>

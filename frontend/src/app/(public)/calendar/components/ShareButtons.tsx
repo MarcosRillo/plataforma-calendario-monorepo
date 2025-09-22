@@ -1,6 +1,6 @@
 'use client';
 
-import { Share2, MessageCircle, Facebook, Twitter, Link2 } from 'lucide-react';
+import { MessageCircle, Facebook, Twitter, Link2 } from 'lucide-react';
 import { Event } from '@/types/event.types';
 import { useState } from 'react';
 

@@ -167,7 +167,7 @@ export const ApprovalConfirmDialog = ({
           {/* Event Info */}
           <div className="mb-6">
             <h4 className="font-medium text-gray-900 mb-2">Evento:</h4>
-            <p className="text-sm text-gray-600 mb-3">"{eventTitle}"</p>
+            <p className="text-sm text-gray-600 mb-3">&quot;{eventTitle}&quot;</p>
             
             <div className="flex items-center space-x-4 text-sm">
               <div>

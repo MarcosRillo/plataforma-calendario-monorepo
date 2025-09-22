@@ -83,7 +83,7 @@ export const PermissionsHookExample = () => {
       <h2>Permissions Analysis</h2>
       
       <div className="bg-gray-100 p-4 rounded">
-        <p><strong>Current Role:</strong> {currentRole}</p>
+        <p><strong>Current Role:</strong> {currentRole?.role_name || 'None'}</p>
         <p><strong>Organization:</strong> {organization?.name || 'None'}</p>
         <p><strong>Is Admin:</strong> {isAdmin() ? 'Yes' : 'No'}</p>
         <p><strong>Is Organizer:</strong> {isOrganizer() ? 'Yes' : 'No'}</p>

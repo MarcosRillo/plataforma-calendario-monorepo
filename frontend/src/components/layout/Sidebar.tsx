@@ -13,7 +13,6 @@ import {
   Cog6ToothIcon,
   ChevronDoubleLeftIcon,
   PaintBrushIcon,
-  ChartBarIcon,
 } from '@heroicons/react/24/outline';
 
 interface SidebarItem {

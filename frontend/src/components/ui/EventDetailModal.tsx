@@ -11,10 +11,8 @@ import { Dialog, Transition } from '@headlessui/react';
 import {
   XMarkIcon,
   CalendarIcon,
-  ClockIcon,
   BuildingOffice2Icon,
   MapPinIcon,
-  ShareIcon,
   ArrowTopRightOnSquareIcon
 } from '@heroicons/react/24/outline';
 import { StarIcon } from '@heroicons/react/24/solid';
@@ -140,7 +138,7 @@ export const EventDetailModal = ({
 
   // Helper functions
   const ENTE_TURISMO_ORG_ID = 1;
-  const isEnteEvent = event.organization_id === ENTE_TURISMO_ORG_ID;
+  const isEnteEvent = event.organizer?.id === ENTE_TURISMO_ORG_ID;
 
   // Date formatting (unified for all contexts)
   const formatDate = (dateString: string) => {
@@ -214,8 +212,12 @@ export const EventDetailModal = ({
     window.open(url, '_blank');
   };
 
-  const handleDownloadICS = () => {
-    eventPublicExportService.downloadICS(event);
+  const handleDownloadICS = async () => {
+    try {
+      await eventPublicExportService.downloadICalFile();
+    } catch (error) {
+      console.error('Error downloading calendar file:', error);
+    }
   };
 
   // Action handlers with confirmations
@@ -431,10 +433,10 @@ export const EventDetailModal = ({
                         )}
 
                         {/* Organization info for admin context */}
-                        {context === 'admin' && event.organization && (
+                        {context === 'admin' && event.organizer && (
                           <div className="mt-2 flex items-center gap-2">
                             <BuildingOffice2Icon className="w-4 h-4 text-gray-500" />
-                            <span className="text-sm text-gray-600">{event.organization.name}</span>
+                            <span className="text-sm text-gray-600">{event.organizer.organization || event.organizer.name}</span>
                             <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${
                               isEnteEvent
                                 ? 'bg-blue-100 text-blue-700'

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { PlusIcon, ClockIcon, CheckCircleIcon, ShareIcon, XCircleIcon, ViewColumnsIcon, Squares2X2Icon } from '@heroicons/react/24/outline';
 import { useAuth } from '@/context/AuthContext';
 import { Event } from '@/types/event.types';
@@ -58,21 +58,21 @@ export default function EventsPage() {
     publishEvent: workflowPublishEvent,
     requestChanges: workflowRequestChanges,
     rejectEvent: workflowRejectEvent,
-    toggleFeatured,
     isLoading: approvalLoading,
     error: approvalError,
-    canApproveInternal,
-    canRequestPublicApproval,
-    canPublish,
-    canRequestChanges: workflowCanRequestChanges,
-    canReject: workflowCanReject,
-    isInternallyApproved,
-    isPublished,
-    getWorkflowStage,
+    // Workflow functions available but not used in this view
+    // canApproveInternal,
+    // canRequestPublicApproval,
+    // canPublish,
+    // canRequestChanges: workflowCanRequestChanges,
+    // canReject: workflowCanReject,
+    // isInternallyApproved,
+    // isPublished,
+    // getWorkflowStage,
     clearError: clearApprovalError,
-    // Legacy compatibility
-    approveEvent,
-    canApprove
+    // Legacy compatibility - not used in this view
+    // approveEvent,
+    // canApprove
   } = useApprovalManager();
 
   const {
@@ -112,10 +112,10 @@ export default function EventsPage() {
   } = useEventManager();
 
   // Determine default view mode based on user role
-  const shouldShowDashboardByDefault = () => {
+  const shouldShowDashboardByDefault = useCallback(() => {
     const userRole = user?.role?.role_code;
     return userRole === 'entity_admin' || userRole === 'entity_staff';
-  };
+  }, [user?.role?.role_code]);
 
   // Set default view mode based on user role
   useEffect(() => {
@@ -123,7 +123,7 @@ export default function EventsPage() {
       const defaultMode = shouldShowDashboardByDefault() ? 'dashboard' : 'table';
       setViewMode(defaultMode);
     }
-  }, [user]);
+  }, [user, shouldShowDashboardByDefault]);
   
   const handleEditEvent = (event: Event) => {
     openEditModal(event);
@@ -241,12 +241,13 @@ export default function EventsPage() {
     });
   };
 
-  const handleToggleFeatured = async (event: Event) => {
-    const updatedEvent = await toggleFeatured(event.id);
-    if (updatedEvent) {
-      refreshData();
-    }
-  };
+  // handleToggleFeatured implementation removed - feature not active in this view
+  // const handleToggleFeatured = async (event: Event) => {
+  //   const updatedEvent = await toggleFeatured(event.id);
+  //   if (updatedEvent) {
+  //     refreshData();
+  //   }
+  // };
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">

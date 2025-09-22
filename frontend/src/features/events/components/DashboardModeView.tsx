@@ -6,7 +6,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { Event } from '@/types/event.types';
 import { EventsFilterTabs, EventsList, DashboardTab } from './';
@@ -58,17 +58,12 @@ export const DashboardModeView = ({
     'historic': 0,
   });
 
-  // Helper function to identify if event belongs to Ente de Turismo
-  const ENTE_TURISMO_ORG_ID = 1; // Ente de Turismo organization ID
-  const isEnteEvent = (event: Event): boolean => {
-    return event.organization_id === ENTE_TURISMO_ORG_ID;
-  };
 
   // Check if user should see dashboard mode
-  const shouldShowDashboardMode = () => {
+  const shouldShowDashboardMode = useCallback(() => {
     const userRole = user?.role?.role_code;
     return userRole === 'entity_admin' || userRole === 'entity_staff';
-  };
+  }, [user?.role?.role_code]);
 
   // Filter events based on active tab using real status_code values
   const filterEventsByTab = (events: Event[], tab: DashboardTab): Event[] => {
@@ -82,7 +77,7 @@ export const DashboardModeView = ({
       case 'requires-action':
         // Events that need immediate action from administrators
         filtered = events.filter(event => {
-          const statusCode = event.status?.status_code;
+          const statusCode = typeof event.status === 'string' ? event.status : event.status?.status_code;
           return (
             statusCode === 'pending_internal_approval' ||  // Need internal approval
             statusCode === 'pending_public_approval' ||    // Need public approval
@@ -94,7 +89,7 @@ export const DashboardModeView = ({
       case 'pending':
         // Events approved internally but not yet in public calendar
         filtered = events.filter(event => {
-          const statusCode = event.status?.status_code;
+          const statusCode = typeof event.status === 'string' ? event.status : event.status?.status_code;
           return (
             statusCode === 'approved_internal' ||  // Ready for public request
             statusCode === 'draft'                 // Still being drafted
@@ -105,7 +100,7 @@ export const DashboardModeView = ({
       case 'published':
         // Events that are live and visible to public calendar
         filtered = events.filter(event => {
-          const statusCode = event.status?.status_code;
+          const statusCode = typeof event.status === 'string' ? event.status : event.status?.status_code;
           return statusCode === 'published';
         });
         break;
@@ -113,7 +108,7 @@ export const DashboardModeView = ({
       case 'historic':
         // Events that are finished, rejected, or cancelled
         filtered = events.filter(event => {
-          const statusCode = event.status?.status_code;
+          const statusCode = typeof event.status === 'string' ? event.status : event.status?.status_code;
           const isRejectedOrCancelled =
             statusCode === 'rejected' ||
             statusCode === 'cancelled';
@@ -133,7 +128,7 @@ export const DashboardModeView = ({
   };
 
   // Calculate tab counters
-  const calculateCounters = (events: Event[]): TabCounters => {
+  const calculateCounters = useCallback((events: Event[]): TabCounters => {
     if (!events) {
       return {
         'requires-action': 0,
@@ -149,7 +144,7 @@ export const DashboardModeView = ({
       'published': filterEventsByTab(events, 'published').length,
       'historic': filterEventsByTab(events, 'historic').length,
     };
-  };
+  }, []);
 
   // Handler functions for event actions - pass through to parent handlers
   const handleApproveInternal = (event: Event) => {
@@ -174,7 +169,11 @@ export const DashboardModeView = ({
 
   // Legacy handler for backward compatibility
   const handleApproveEvent = (event: Event) => {
-    onApproveEvent?.(event) || onApproveInternal?.(event);
+    if (onApproveEvent) {
+      onApproveEvent(event);
+    } else if (onApproveInternal) {
+      onApproveInternal(event);
+    }
   };
 
   // Update filtered events and counters when events or activeTab changes
@@ -186,7 +185,7 @@ export const DashboardModeView = ({
       setFilteredEvents(filtered);
       setCounters(newCounters);
     }
-  }, [events, activeTab]);
+  }, [events, activeTab, calculateCounters]);
 
   // Set initial tab based on user role and available events
   useEffect(() => {
@@ -207,7 +206,7 @@ export const DashboardModeView = ({
       // For non-admin users, default to published events
       setActiveTab('published');
     }
-  }, [events, user]);
+  }, [events, user, calculateCounters, shouldShowDashboardMode]);
 
   // If not dashboard mode, show all events (fallback for users without admin roles or when auth is not loaded)
   if (!shouldShowDashboardMode()) {

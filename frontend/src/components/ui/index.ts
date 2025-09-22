@@ -13,9 +13,9 @@ export { default as LoadingSpinner } from './LoadingSpinner';
 export { default as Pagination } from './Pagination';
 export { default as Checkbox } from './Checkbox';
 export { default as ColorInput } from './ColorInput';
-export { default as ColorPicker } from './ColorPicker';
+export { ColorPicker } from './ColorPicker';
 export { default as SafeImage } from './SafeImage';
-export { default as ButtonGroupSelector } from './ButtonGroupSelector';
+// ButtonGroupSelector removed - not used in codebase
 export { RadioGroup } from './RadioGroup';
 
 // Table Components

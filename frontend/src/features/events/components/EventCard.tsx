@@ -132,7 +132,7 @@ export const EventCard = ({
 
   // Double-level workflow helper functions
   const getEventStatus = () => {
-    return event.status?.status_code || event.approval_status;
+    return typeof event.status === 'string' ? event.status : event.status?.status_code;
   };
 
   const canApproveInternal = () => {
@@ -177,7 +177,7 @@ export const EventCard = ({
 
             <div className="flex items-center text-sm text-gray-600">
               <BuildingOffice2Icon className="w-4 h-4 mr-1" />
-              <span className="truncate">{event.organization?.name || 'Sin organización'}</span>
+              <span className="truncate">{event.organizer?.organization || event.organizer?.name || 'Sin organización'}</span>
             </div>
           </div>
 
@@ -190,8 +190,8 @@ export const EventCard = ({
 
         {/* Status and Category */}
         <div className="flex items-center gap-2 mb-4">
-          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getStatusColor(event.approval_status)}`}>
-            {event.approval_status}
+          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getStatusColor(getEventStatus())}`}>
+            {getEventStatus()}
           </span>
 
           {/* Organization Type Badge */}
@@ -207,8 +207,8 @@ export const EventCard = ({
             <span
               className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border text-white"
               style={{
-                backgroundColor: event.category.color,
-                borderColor: event.category.color,
+                backgroundColor: event.category.color || '#228B22',
+                borderColor: event.category.color || '#228B22',
               }}
             >
               {event.category.name}

@@ -3,8 +3,8 @@
  * HTTP client for Laravel backend with JWT authentication and error handling
  */
 
-// Types for API responses
-export interface ApiResponse<T = any> {
+// Core domain types for API responses
+export interface ApiResponse<T> {
   success: boolean;
   data: T;
   message: string;
@@ -17,13 +17,100 @@ export interface ApiError {
   error?: string;
 }
 
+// Specific domain response types
+export interface PaginatedResponse<T> {
+  data: T[];
+  meta: {
+    current_page: number;
+    last_page: number;
+    total: number;
+    per_page: number;
+  };
+}
+
+export interface AuthResponse {
+  user: User;
+  token: string;
+}
+
+// Domain entities
+export interface User {
+  id: number;
+  name: string;
+  email: string;
+  role: string;
+  organization_id?: number;
+}
+
+export interface Event {
+  id: number;
+  title: string;
+  description: string;
+  start_date: string;
+  end_date: string;
+  status: EventStatus;
+  category_id: number;
+  organization_id: number;
+  is_featured: boolean;
+}
+
+export type EventStatus = 'draft' | 'pending_review' | 'approved' | 'published' | 'rejected';
+
+// Request data types
+export interface LoginData {
+  email: string;
+  password: string;
+}
+
+export interface EventFormData {
+  title: string;
+  description: string;
+  start_date: string;
+  end_date: string;
+  category_id: number;
+  organization_id?: number;
+}
+
+// Error types for better error handling
+export class NetworkError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'NetworkError';
+  }
+}
+
+export class ValidationError extends Error {
+  public errors: Record<string, string[]>;
+
+  constructor(message: string, errors: Record<string, string[]> = {}) {
+    super(message);
+    this.name = 'ValidationError';
+    this.errors = errors;
+  }
+}
+
+export class AuthenticationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'AuthenticationError';
+  }
+}
+
+// Response data types (not currently used)
+// type JsonResponse = Record<string, unknown>;
+// type TextResponse = string;
+// type ResponseData = JsonResponse | TextResponse | null;
+
+// Request body types for HTTP methods
+type RequestBody = Record<string, unknown> | FormData | null;
+
 // HTTP method types
 type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
 interface RequestConfig {
   method: HttpMethod;
   headers: HeadersInit;
-  body?: string;
+  body?: string | FormData;
 }
 
 class ApiClient {
@@ -60,7 +147,7 @@ class ApiClient {
     const token = this.getAuthToken();
     
     if (token) {
-      (headers as any).Authorization = `Bearer ${token}`;
+      (headers as Record<string, string>).Authorization = `Bearer ${token}`;
     }
     
     return headers;
@@ -71,7 +158,7 @@ class ApiClient {
    */
   private async handleResponse<T>(response: Response): Promise<T> {
     const contentType = response.headers.get('content-type');
-    let responseData: any;
+    let responseData: unknown;
 
     try {
       if (contentType?.includes('application/json')) {
@@ -86,7 +173,7 @@ class ApiClient {
     // Handle different HTTP status codes
     if (response.ok) {
       // Success (200-299)
-      return responseData;
+      return responseData as T;
     }
 
     // Handle specific error codes
@@ -106,8 +193,9 @@ class ApiClient {
 
       case 422:
         // Validation error
-        const validationMessage = responseData?.message || 'Error de validación.';
-        const validationErrors = responseData?.errors || {};
+        const apiError = responseData as ApiError;
+        const validationMessage = apiError?.message || 'Error de validación.';
+        const validationErrors = apiError?.errors || {};
         const errorMessages = Object.values(validationErrors).flat();
         
         if (errorMessages.length > 0) {
@@ -121,7 +209,8 @@ class ApiClient {
 
       case 500:
         // Internal server error
-        const serverMessage = responseData?.message || 'Error interno del servidor.';
+        const serverError = responseData as ApiError;
+        const serverMessage = serverError?.message || 'Error interno del servidor.';
         throw new Error(serverMessage);
 
       case 503:
@@ -130,7 +219,8 @@ class ApiClient {
 
       default:
         // Generic error
-        const errorMessage = responseData?.message || `Error HTTP ${response.status}`;
+        const genericError = responseData as ApiError;
+        const errorMessage = genericError?.message || `Error HTTP ${response.status}`;
         throw new Error(errorMessage);
     }
   }
@@ -183,13 +273,20 @@ class ApiClient {
   /**
    * Check if error is a network error that can be retried
    */
-  private isNetworkError(error: any): boolean {
-    return (
-      error instanceof TypeError ||
-      error.message.includes('fetch') ||
-      error.message.includes('network') ||
-      error.message.includes('NetworkError')
-    );
+  private isNetworkError(error: unknown): boolean {
+    if (error instanceof TypeError) {
+      return true;
+    }
+
+    if (error instanceof Error) {
+      return (
+        error.message.includes('fetch') ||
+        error.message.includes('network') ||
+        error.message.includes('NetworkError')
+      );
+    }
+
+    return false;
   }
 
   /**
@@ -202,7 +299,7 @@ class ApiClient {
   /**
    * GET request
    */
-  async get<T = any>(url: string, headers?: HeadersInit): Promise<T> {
+  async get<T>(url: string, headers?: HeadersInit): Promise<T> {
     return this.makeRequest<T>(url, {
       method: 'GET',
       headers: headers || {},
@@ -212,7 +309,7 @@ class ApiClient {
   /**
    * POST request
    */
-  async post<T = any>(url: string, data?: any, headers?: HeadersInit): Promise<T> {
+  async post<T>(url: string, data?: RequestBody, headers?: HeadersInit): Promise<T> {
     return this.makeRequest<T>(url, {
       method: 'POST',
       headers: headers || {},
@@ -223,7 +320,7 @@ class ApiClient {
   /**
    * PUT request
    */
-  async put<T = any>(url: string, data?: any, headers?: HeadersInit): Promise<T> {
+  async put<T>(url: string, data?: RequestBody, headers?: HeadersInit): Promise<T> {
     return this.makeRequest<T>(url, {
       method: 'PUT',
       headers: headers || {},
@@ -234,7 +331,7 @@ class ApiClient {
   /**
    * PATCH request
    */
-  async patch<T = any>(url: string, data?: any, headers?: HeadersInit): Promise<T> {
+  async patch<T>(url: string, data?: RequestBody, headers?: HeadersInit): Promise<T> {
     return this.makeRequest<T>(url, {
       method: 'PATCH',
       headers: headers || {},
@@ -245,7 +342,7 @@ class ApiClient {
   /**
    * DELETE request
    */
-  async delete<T = any>(url: string, headers?: HeadersInit): Promise<T> {
+  async delete<T>(url: string, headers?: HeadersInit): Promise<T> {
     return this.makeRequest<T>(url, {
       method: 'DELETE',
       headers: headers || {},
@@ -255,7 +352,7 @@ class ApiClient {
   /**
    * Upload file (multipart/form-data)
    */
-  async upload<T = any>(url: string, formData: FormData): Promise<T> {
+  async upload<T>(url: string, formData: FormData): Promise<T> {
     const token = this.getAuthToken();
     const headers: HeadersInit = {};
     
@@ -268,7 +365,7 @@ class ApiClient {
     return this.makeRequest<T>(url, {
       method: 'POST',
       headers,
-      body: formData as any,
+      body: formData,
     });
   }
 

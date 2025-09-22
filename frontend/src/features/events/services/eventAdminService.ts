@@ -95,16 +95,6 @@ export const eventAdminService: Omit<AdminEventService, 'approval'> = {
     return response.data.data;
   },
 
-  /**
-   * Bulk duplicate events
-   */
-  async bulkDuplicateEvents(eventIds: number[], overrides: Partial<EventFormData> = {}): Promise<Event[]> {
-    const response = await apiClient.post('/v1/events/bulk-duplicate', { 
-      event_ids: eventIds, 
-      ...overrides 
-    });
-    return response.data.data;
-  },
 
   /**
    * Toggle featured status
@@ -124,13 +114,6 @@ export const eventAdminService: Omit<AdminEventService, 'approval'> = {
       comment,
     });
     return response.data.data;
-  },
-
-  /**
-   * Archive events
-   */
-  async archiveEvents(eventIds: number[]): Promise<void> {
-    await apiClient.post('/v1/events/bulk-archive', { event_ids: eventIds });
   },
 
   /**
@@ -160,21 +143,6 @@ export const eventAdminService: Omit<AdminEventService, 'approval'> = {
     return response.data;
   },
 
-  /**
-   * Get detailed event statistics with date range
-   */
-  async getDetailedStatistics(startDate?: string, endDate?: string): Promise<EventStatistics & {
-    dailyStats: { date: string; events: number; attendees: number }[];
-    topCategories: { category: string; count: number }[];
-    topLocations: { location: string; count: number }[];
-  }> {
-    const params = new URLSearchParams();
-    if (startDate) params.append('start_date', startDate);
-    if (endDate) params.append('end_date', endDate);
-
-    const response = await apiClient.get(`/v1/events/statistics/detailed?${params.toString()}`);
-    return response.data;
-  },
 };
 
 /**
