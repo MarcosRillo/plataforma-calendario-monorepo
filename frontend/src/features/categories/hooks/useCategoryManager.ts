@@ -4,7 +4,7 @@
  */
 
 import { useCallback, useMemo } from 'react';
-import { usePaginatedData, PaginationMeta } from '../../../hooks/usePaginatedData';
+import { usePaginatedData, PaginationMeta } from '@/hooks/usePaginatedData';
 import { useAuth } from '@/context/AuthContext';
 import { 
   getCategories, 
@@ -14,7 +14,7 @@ import {
   Category,
   CategoryFilterStatus,
   CategoryQueryParams,
-} from '../../../types/category.types';
+} from '@/types/category.types';
 
 // Define the filters interface for categories
 interface CategoryFilters {

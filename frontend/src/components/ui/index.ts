@@ -24,6 +24,10 @@ export { Table, type TableColumn, type TableAction, type TablePaginationProps, t
 // Event Components
 export { EventDetailModal, type EventDetailModalProps, type EventDetailContext } from './EventDetailModal';
 
+// Layout Components
+export { default as Card } from './Card';
+export { default as Badge } from './Badge';
+
 // Dialog Components
 export { default as ConfirmDialog } from './ConfirmDialog';
 export { default as PromptDialog } from './PromptDialog';

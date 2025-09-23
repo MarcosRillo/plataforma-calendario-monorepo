@@ -6,7 +6,7 @@
 'use client';
 
 import { useState, useCallback, useMemo } from 'react';
-import { usePaginatedData, PaginationMeta } from '../../../hooks/usePaginatedData';
+import { usePaginatedData, PaginationMeta } from '@/hooks/usePaginatedData';
 import { useAuth } from '@/context/AuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
 import { 

@@ -9,12 +9,9 @@
 import { useState } from 'react';
 import { PlusIcon, MagnifyingGlassIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import { TagIcon, CheckCircleIcon, XCircleIcon } from '@heroicons/react/24/solid';
-import CategoryTable from '../../../features/categories/components/CategoryTable';
-import CreateCategoryModal from '../../../features/categories/components/CreateCategoryModal';
-import EditCategoryModal from '../../../features/categories/components/EditCategoryModal';
-import { useCategoryManager } from '../../../features/categories/hooks/useCategoryManager';
-import { Button, Input, LoadingSpinner, Select } from '../../../components/ui';
-import { Category, CategoryFilterStatus } from '../../../types/category.types';
+import { CategoryTableContainer, CreateCategoryModal, EditCategoryModal, useCategoryManager } from '@/features/categories';
+import { Button, Input, LoadingSpinner, Select } from '@/components/ui';
+import { Category, CategoryFilterStatus } from '@/types/category.types';
 
 const CategoriesPage: React.FC = () => {
   // Use the bulletproof custom hook - all values are guaranteed to be safe
@@ -186,7 +183,7 @@ const CategoriesPage: React.FC = () => {
 
         {/* Categories Table - Only render if not loading and categories exist */}
         {!isLoading && (
-          <CategoryTable
+          <CategoryTableContainer
             categories={categories} // Hook guarantees this is always an array
             pagination={pagination}
             onEdit={handleEditCategory}

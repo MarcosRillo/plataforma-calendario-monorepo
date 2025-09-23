@@ -7,13 +7,13 @@ import { Event } from '@/types/event.types';
 import { useEventManager } from '@/features/events/hooks/useEventManager';
 import { useApprovalManager } from '@/features/events/hooks/useApprovalManager';
 import {
-  EventTable,
   CreateEventForm,
   EditEventForm,
-  ApprovalModal,
   EventFiltersBar,
   DashboardModeView,
 } from '@/features/events/components';
+import { EventTableContainer } from '@/features/events/components/smart';
+import { ApprovalModalContainer } from '@/features/events/components/smart';
 import { EventDetailModal } from '@/components/ui';
 import { Pagination, Button, ConfirmDialog, PromptDialog } from '@/components/ui';
 
@@ -451,7 +451,7 @@ export default function EventsPage() {
 
             {/* Events table */}
             <div className="bg-white shadow-sm rounded-lg">
-              <EventTable
+              <EventTableContainer
                 events={events}
                 isLoading={isLoading}
                 onSelectEvent={handleSelectEvent}
@@ -494,7 +494,7 @@ export default function EventsPage() {
           onSubmit={updateEvent}
         />
 
-        <ApprovalModal
+        <ApprovalModalContainer
           isOpen={isApprovalModalOpen}
           event={currentEvent}
           onClose={closeAllModals}
