@@ -7,7 +7,7 @@
 'use client';
 
 import { Event } from '@/types/event.types';
-import { EventCard } from './EventCard';
+import { EventCardContainer } from './smart/EventCardContainer';
 
 interface EventsListProps {
   events: Event[];
@@ -39,11 +39,6 @@ export const EventsList = ({
   // Legacy compatibility
   onApproveEvent
 }: EventsListProps) => {
-  // Helper function to identify if event belongs to Ente de Turismo
-  const ENTE_TURISMO_ORG_ID = 1;
-  const isEnteEvent = (event: Event): boolean => {
-    return event.organizer?.id === ENTE_TURISMO_ORG_ID;
-  };
   if (isLoading) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -109,7 +104,7 @@ export const EventsList = ({
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       {events.map((event) => (
-        <EventCard
+        <EventCardContainer
           key={event.id}
           event={event}
           onViewDetail={onViewDetail}
@@ -122,7 +117,6 @@ export const EventsList = ({
           onRejectEvent={onRejectEvent}
           // Legacy compatibility
           onApproveEvent={onApproveEvent}
-          isEnteEvent={isEnteEvent(event)}
         />
       ))}
     </div>

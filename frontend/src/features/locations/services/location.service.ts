@@ -10,12 +10,12 @@
  */
 
 import { AxiosResponse } from 'axios';
-import apiClient from '../../../services/apiClient';
+import apiClient from '@/services/apiClient';
 import {
   Location,
   LocationPagination,
   LocationFilters,
-} from '../../../types/location.types';
+} from '@/types/location.types';
 
 /**
  * Fetch paginated locations

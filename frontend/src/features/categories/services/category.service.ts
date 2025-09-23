@@ -10,7 +10,7 @@
  */
 
 import { AxiosResponse, AxiosError } from 'axios';
-import apiClient from '../../../services/apiClient';
+import { apiClient } from '@/lib/api';
 import {
   Category,
   CategoryPagination,
@@ -19,29 +19,22 @@ import {
   CategoryQueryParams,
   ApiResponse,
   ApiErrorResponse,
-} from '../../../types/category.types';
+} from '@/types/category.types';
 
 /**
  * Fetch paginated categories
  * Returns Laravel Resource Collection with pagination metadata
  */
 export const getCategories = async (params: CategoryQueryParams = {}): Promise<CategoryPagination> => {
-  try {
-    // Laravel Resource collections with pagination return the paginated data directly
-    const response: AxiosResponse<CategoryPagination> = await apiClient.get('/v1/categories', {
-      params: {
-        page: params.page || 1,
-        per_page: params.per_page || 15,
-        search: params.search || '',
-        active: params.active,
-      },
-    });
-    
-    // Laravel Resource pagination structure is directly in response.data
-    return response.data;
-  } catch (error) {
-    throw error;
-  }
+  const searchParams = new URLSearchParams();
+
+  if (params.page) searchParams.append('page', String(params.page));
+  if (params.per_page) searchParams.append('per_page', String(params.per_page));
+  if (params.search) searchParams.append('search', params.search);
+  if (params.active !== undefined) searchParams.append('active', String(params.active));
+
+  const response = await apiClient.get<CategoryPagination>(`/v1/categories?${searchParams.toString()}`);
+  return response;
 };
 
 /**
@@ -49,13 +42,7 @@ export const getCategories = async (params: CategoryQueryParams = {}): Promise<C
  * Returns ApiResponse<Category> wrapper structure
  */
 export const getCategory = async (id: number): Promise<Category> => {
-  try {
-    const response: AxiosResponse<ApiResponse<Category>> = await apiClient.get(`/v1/categories/${id}`);
-    
-    return response.data.data;
-  } catch (error) {
-    throw error;
-  }
+  return await apiClient.get<Category>(`/v1/categories/${id}`);
 };
 
 /**
@@ -217,12 +204,15 @@ export const getPublicCategories = async (): Promise<{
   description?: string;
   event_count: number;
 }[]> => {
-  try {
-    const response = await apiClient.get('/v1/public/categories');
-    return response.data.data;
-  } catch (error) {
-    throw error;
-  }
+  const response = await apiClient.get<{
+    id: number;
+    name: string;
+    slug: string;
+    color: string;
+    description?: string;
+    event_count: number;
+  }[]>('/v1/public/categories');
+  return response;
 };
 
 /**

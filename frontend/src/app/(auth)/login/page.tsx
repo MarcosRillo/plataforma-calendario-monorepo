@@ -6,9 +6,9 @@
 
 'use client';
 
-import { useAuth } from '../../../context/AuthContext';
-import { useLoginForm } from '../../../features/auth/hooks/useLoginForm';
-import { Button, Input, LoadingSpinner } from '../../../components/ui';
+import { useAuth } from '@/context/AuthContext';
+import { useLoginForm } from '@/features/auth';
+import { Button, Input, LoadingSpinner } from '@/components/ui';
 
 const LoginPage = () => {
   const { isAuthenticated } = useAuth();

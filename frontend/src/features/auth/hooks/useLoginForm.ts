@@ -5,8 +5,8 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '../../../context/AuthContext';
-import { LoginCredentials, LoginFormState, LoginFormActions } from '../../../types/auth.types';
+import { useAuth } from '@/context/AuthContext';
+import { LoginCredentials, LoginFormState, LoginFormActions } from '@/types/auth.types';
 
 export const useLoginForm = (): LoginFormState & LoginFormActions => {
   const [email, setEmail] = useState('');
